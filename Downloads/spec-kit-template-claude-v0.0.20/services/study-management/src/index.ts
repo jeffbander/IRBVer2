@@ -1,27 +1,47 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { createLogger } from '@research-study/shared';
+import { createApp } from './app';
 
+// Load environment variables
 dotenv.config();
 
-const app = express();
 const logger = createLogger('study-management');
 const PORT = process.env.PORT || 3001;
 
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+// Create Express app
+const app = createApp();
 
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'study-management',
-    timestamp: new Date().toISOString(),
+// Start server
+const server = app.listen(PORT, () => {
+  logger.info(`🏥 Mount Sinai Research Study Management Service`);
+  logger.info(`📍 Running on port ${PORT}`);
+  logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
+  logger.info(`📚 API Base URL: http://localhost:${PORT}/api/v1`);
+  logger.info(`\nSample endpoints:`);
+  logger.info(`  POST http://localhost:${PORT}/api/v1/auth/login`);
+  logger.info(`  GET  http://localhost:${PORT}/api/v1/studies`);
+  logger.info(`  POST http://localhost:${PORT}/api/v1/studies`);
+  logger.info(`\nTest credentials:`);
+  logger.info(`  Email: sarah.chen@mountsinai.org`);
+  logger.info(`  Password: Test123!`);
+  logger.info(`\n✅ Server is ready and listening for requests...`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
   });
 });
 
-app.listen(PORT, () => {
-  logger.info(`Study Management Service running on port ${PORT}`);
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
 });
+
+export default app;
