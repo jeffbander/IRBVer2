@@ -1,0 +1,278 @@
+// Research Study Management Database Schema
+// Based on System Architect specifications
+// Using SQLite for development (switch to PostgreSQL for production)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and roles
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  image         String?
+  emailVerified DateTime?
+  password      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  roles         UserRole[]
+  studiesAsPi   Study[]        @relation("StudyPI")
+  assignments   Assignment[]
+  documents     Document[]
+  tasks         Task[]
+  auditEvents   AuditEvent[]
+  statusChanges IRBStatusHistory[]
+  budgetLines   BudgetLine[]
+}
+
+// Role model for RBAC
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions String   // JSON string array of permissions
+
+  // Relations
+  users       UserRole[]
+}
+
+// Join table for User-Role many-to-many
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+// Study Type configuration
+model StudyType {
+  id                    String   @id @default(cuid())
+  name                  String   @unique
+  regulatedFields       String   // JSON string array
+  defaultTaskTemplateId String?
+
+  // Relations
+  studies              Study[]
+  defaultTaskTemplate  TaskTemplate? @relation(fields: [defaultTaskTemplateId], references: [id])
+}
+
+// Task Template for auto-generation
+model TaskTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+
+  // Relations
+  tasks       TaskTemplateItem[]
+  studyTypes  StudyType[]
+}
+
+// Individual task items within a template
+model TaskTemplateItem {
+  id           String   @id @default(cuid())
+  templateId   String
+  title        String
+  role         String
+  offsetDays   Int      @default(0)
+  description  String?
+  orderIndex   Int
+
+  template     TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+// Main Study entity
+model Study {
+  id           String    @id @default(cuid())
+  title        String
+  typeId       String
+  riskLevel    String    // "MINIMAL" or "MORE_THAN_MINIMAL"
+  piId         String
+  sponsorName  String?
+  sites        String    // JSON array of site objects
+  indNumber    String?   // For Drug studies
+  ideNumber    String?   // For Device studies
+  deviceRisk   String?   // Device risk category
+  isMultisite  Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  type         StudyType        @relation(fields: [typeId], references: [id])
+  pi           User             @relation("StudyPI", fields: [piId], references: [id])
+  assignments  Assignment[]
+  documents    Document[]
+  submissions  IRBSubmission[]
+  tasks        Task[]
+  budget       Budget?
+  auditEvents  AuditEvent[]
+}
+
+// Assignment of people to studies
+model Assignment {
+  id         String   @id @default(cuid())
+  studyId    String
+  personId   String
+  role       String
+  effortPct  Float?   // Percentage effort
+  hoursWeek  Float?   // Alternative: hours per week
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  study      Study    @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  person     User     @relation(fields: [personId], references: [id])
+}
+
+// Document management with versioning
+model Document {
+  id          String       @id @default(cuid())
+  studyId     String
+  kind        String       // PROTOCOL, BUDGET, CONSENT, IRB_LETTER, OTHER
+  version     Int
+  sha256      String       // Hash for integrity
+  filename    String
+  fileUrl     String?      // S3 or storage URL
+  fileSize    Int?
+  uploadedBy  String
+  uploadedAt  DateTime     @default(now())
+  notes       String?
+
+  // Relations
+  study       Study        @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  uploader    User         @relation(fields: [uploadedBy], references: [id])
+  submissions IRBSubmissionDocument[]
+
+  @@unique([studyId, kind, version])
+}
+
+// IRB Submission tracking
+model IRBSubmission {
+  id                   String    @id @default(cuid())
+  studyId              String
+  path                 String?   // EXEMPT, EXPEDITED, or CONVENED
+  currentStatus        String
+  expeditedCategory    String?
+  submittedAt          DateTime
+  meetingDate          DateTime?
+  determinedAt         DateTime?
+  determinationLetterId String?
+
+  // Relations
+  study                Study                   @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  statusHistory        IRBStatusHistory[]
+  documents            IRBSubmissionDocument[]
+}
+
+// Join table for IRB Submission documents (frozen packet)
+model IRBSubmissionDocument {
+  id           String   @id @default(cuid())
+  submissionId String
+  documentId   String
+  createdAt    DateTime @default(now())
+
+  submission   IRBSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  document     Document      @relation(fields: [documentId], references: [id])
+
+  @@unique([submissionId, documentId])
+}
+
+// IRB Status change history
+model IRBStatusHistory {
+  id             String   @id @default(cuid())
+  submissionId   String
+  fromStatus     String
+  toStatus       String
+  changedAt      DateTime @default(now())
+  actorId        String
+  note           String?
+  letterUrl      String?
+
+  // Relations
+  submission     IRBSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  actor          User          @relation(fields: [actorId], references: [id])
+}
+
+// Task management
+model Task {
+  id          String     @id @default(cuid())
+  studyId     String
+  title       String
+  description String?
+  ownerId     String?
+  dueAt       DateTime?
+  status      String     @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, BLOCKED, CANCELLED
+  blockedBy   String     // JSON array of task IDs
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  completedAt DateTime?
+
+  // Relations
+  study       Study      @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  owner       User?      @relation(fields: [ownerId], references: [id])
+}
+
+// Budget management
+model Budget {
+  id         String       @id @default(cuid())
+  studyId    String       @unique
+  currency   String       @default("USD")
+  totalAmount Float
+  directCost Float?
+  indirectCost Float?
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  // Relations
+  study      Study        @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  lines      BudgetLine[]
+}
+
+// Budget line items
+model BudgetLine {
+  id         String   @id @default(cuid())
+  budgetId   String
+  category   String
+  amount     Float
+  personId   String?
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  budget     Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  person     User?    @relation(fields: [personId], references: [id])
+}
+
+// Audit trail for compliance
+model AuditEvent {
+  id          String   @id @default(cuid())
+  entityType  String   // e.g., "Study", "IRBSubmission", "Assignment"
+  entityId    String
+  action      String   // e.g., "CREATE", "UPDATE", "DELETE", "STATUS_CHANGE"
+  actorId     String
+  timestamp   DateTime @default(now())
+  before      String?  // JSON string - Previous state
+  after       String?  // JSON string - New state
+  metadata    String?  // JSON string - Additional context
+
+  // Relations
+  actor       User     @relation(fields: [actorId], references: [id])
+  study       Study?   @relation(fields: [entityId], references: [id])
+}
