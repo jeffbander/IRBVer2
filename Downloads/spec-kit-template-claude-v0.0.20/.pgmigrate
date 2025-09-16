@@ -1,0 +1,11 @@
+{
+  "databaseUrl": {
+    "dev": "postgresql://research_admin:research_secure_pwd_2025@localhost:5432/research_study_db",
+    "test": "postgresql://research_admin:research_secure_pwd_2025@localhost:5432/research_study_db_test"
+  },
+  "migrationsDir": "services/study-management/migrations",
+  "migrationsTable": "pgmigrations",
+  "checkOrder": true,
+  "createMigrationsSchema": true,
+  "migrationFilenameFormat": "utc"
+}
