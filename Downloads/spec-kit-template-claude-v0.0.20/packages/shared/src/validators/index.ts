@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { StudyStatus, StudyPhase, ParticipantStatus, UserRole } from '../types';
+import { StudyStatus, StudyPhase, UserRole } from '../types';
 
 export const StudySchema = z.object({
   id: z.string().uuid(),
@@ -12,18 +12,6 @@ export const StudySchema = z.object({
   endDate: z.date().optional(),
   targetEnrollment: z.number().int().positive(),
   currentEnrollment: z.number().int().min(0),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-export const ParticipantSchema = z.object({
-  id: z.string().uuid(),
-  studyId: z.string().uuid(),
-  externalId: z.string().min(1),
-  status: z.nativeEnum(ParticipantStatus),
-  enrollmentDate: z.date(),
-  withdrawalDate: z.date().optional(),
-  withdrawalReason: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -48,10 +36,122 @@ export const CreateStudySchema = StudySchema.omit({
 
 export const UpdateStudySchema = CreateStudySchema.partial();
 
-export const CreateParticipantSchema = ParticipantSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+// Import all participant validators
+export * from './participant';
+
+// Authentication Validators
+export const LoginRequestSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required'),
+  rememberMe: z.boolean().optional(),
 });
 
-export const UpdateParticipantSchema = CreateParticipantSchema.partial();
+export const RegisterRequestSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters long')
+    .max(128, 'Password must be less than 128 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character'),
+  firstName: z.string()
+    .min(1, 'First name is required')
+    .max(100, 'First name must be less than 100 characters')
+    .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
+  lastName: z.string()
+    .min(1, 'Last name is required')
+    .max(100, 'Last name must be less than 100 characters')
+    .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
+  role: z.nativeEnum(UserRole).optional(),
+});
+
+export const RefreshTokenRequestSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string()
+    .min(8, 'Password must be at least 8 characters long')
+    .max(128, 'Password must be less than 128 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character'),
+});
+
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email format'),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters long')
+    .max(128, 'Password must be less than 128 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character'),
+});
+
+export const AuthUserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  role: z.nativeEnum(UserRole),
+  active: z.boolean(),
+  passwordHash: z.string(),
+  lastLoginAt: z.date().optional(),
+  isEmailVerified: z.boolean(),
+  emailVerificationToken: z.string().optional(),
+  passwordResetToken: z.string().optional(),
+  passwordResetExpires: z.date().optional(),
+  failedLoginAttempts: z.number().int().min(0).max(10),
+  lockoutUntil: z.date().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const JWTPayloadSchema = z.object({
+  userId: z.string().uuid(),
+  email: z.string().email(),
+  role: z.nativeEnum(UserRole),
+  iat: z.number().optional(),
+  exp: z.number().optional(),
+});
+
+// Validation helper functions
+export const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+
+  if (password.length > 128) {
+    errors.push('Password must be less than 128 characters');
+  }
+
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+
+  if (!/\d/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+
+  if (!/[@$!%*?&]/.test(password)) {
+    errors.push('Password must contain at least one special character (@$!%*?&)');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+};
+
+export const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
