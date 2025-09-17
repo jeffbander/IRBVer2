@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["**/*.test.ts", "**/*.spec.ts"]
+=======
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
@@ -6,4 +17,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["**/*.test.ts", "**/*.spec.ts"]
+>>>>>>> origin/001-research-study-management
 }
