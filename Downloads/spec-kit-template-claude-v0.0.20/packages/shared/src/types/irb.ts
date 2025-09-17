@@ -1,6 +1,6 @@
 // IRB and Compliance Types for Research Study Management
 
-import { UserRole } from './index';
+// Import removed - UserRole not used in this file
 
 // IRB Submission Types
 export interface IRBSubmission {
