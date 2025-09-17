@@ -1,0 +1,45 @@
+{
+  "name": "@research-study/participant-service",
+  "version": "1.0.0",
+  "description": "Participant Enrollment and Management Service",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon --watch src --exec ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@research-study/shared": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "helmet": "^7.0.0",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.0",
+    "bcrypt": "^6.0.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.23",
+    "@types/jest": "^29.5.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/pg": "^8.10.0",
+    "@types/supertest": "^2.0.16",
+    "@types/uuid": "^9.0.0",
+    "jest": "^29.5.0",
+    "supertest": "^6.3.4",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.2",
+    "nodemon": "^3.1.10",
+    "typescript": "^5.9.2"
+  }
+}
