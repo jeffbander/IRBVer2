@@ -165,11 +165,18 @@ export function createApp() {
     const newStudy = {
       id: `study-${Date.now()}`,
       ...req.body,
-      status: 'DRAFT',
+      principalInvestigatorId: req.body.principalInvestigatorId || 'user-1',
+      principalInvestigator: {
+        id: 'user-1',
+        firstName: 'Sarah',
+        lastName: 'Chen',
+      },
+      status: req.body.status || 'DRAFT',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     mockStudies.push(newStudy);
+    logger.info('Created new study', { studyId: newStudy.id, title: newStudy.title });
     res.status(201).json(newStudy);
   });
 
