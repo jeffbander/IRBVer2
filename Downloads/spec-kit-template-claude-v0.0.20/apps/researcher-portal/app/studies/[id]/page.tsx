@@ -533,15 +533,23 @@ export default function StudyDetailPage() {
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-medium">Study Participants</h2>
-              <button className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 flex items-center gap-2">
+              <Link
+                href={`/studies/${studyId}/participants`}
+                className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 flex items-center gap-2"
+              >
                 <UserPlus className="h-4 w-4" />
-                Enroll Participant
-              </button>
+                Manage Participants
+              </Link>
             </div>
             <div className="text-center py-12 text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p>No participants enrolled yet</p>
-              <p className="text-sm mt-2">Start enrolling participants to track study progress</p>
+              <p>View participant details in the full management interface</p>
+              <Link
+                href={`/studies/${studyId}/participants`}
+                className="text-sm mt-2 text-blue-600 hover:underline inline-block"
+              >
+                Go to Participants →
+              </Link>
             </div>
           </div>
         )}
