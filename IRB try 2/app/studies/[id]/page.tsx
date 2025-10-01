@@ -65,6 +65,14 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
     site: '',
     notes: ''
   });
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadData, setUploadData] = useState({
+    name: '',
+    type: 'PROTOCOL',
+    description: '',
+    version: '1.0',
+    file: null as File | null
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -182,6 +190,53 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
     } catch (error) {
       console.error('Enrollment failed:', error);
       alert('Failed to enroll participant');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!uploadData.name || !uploadData.type || !uploadData.file) {
+      alert('Name, type, and file are required');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('file', uploadData.file);
+      formData.append('name', uploadData.name);
+      formData.append('type', uploadData.type);
+      formData.append('description', uploadData.description);
+      formData.append('version', uploadData.version);
+
+      const response = await fetch(`/api/studies/${params.id}/documents`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        await fetchStudy(token!);
+        setShowUploadModal(false);
+        setUploadData({
+          name: '',
+          type: 'PROTOCOL',
+          description: '',
+          version: '1.0',
+          file: null
+        });
+        alert('Document uploaded successfully!');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to upload document');
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Failed to upload document');
     } finally {
       setSubmitting(false);
     }
@@ -460,7 +515,10 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-gray-900">Documents</h3>
                 {(isPI || isReviewer) && (
-                  <button className="text-[#003F6C] text-sm hover:underline">
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="text-[#003F6C] text-sm hover:underline"
+                  >
                     + Upload
                   </button>
                 )}
@@ -472,10 +530,16 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
                     <div key={doc.id} className="flex items-center justify-between py-2 border-b">
                       <div>
                         <p className="text-sm font-medium">{doc.name}</p>
-                        <p className="text-xs text-gray-500">{doc.type}</p>
+                        <p className="text-xs text-gray-500">{doc.type} - v{doc.version}</p>
                       </div>
-                      <button className="text-[#003F6C] text-sm hover:underline">
-                        View
+                      <button
+                        onClick={async () => {
+                          const token = localStorage.getItem('token');
+                          window.open(`/api/studies/${params.id}/documents/${doc.id}?token=${token}`, '_blank');
+                        }}
+                        className="text-[#003F6C] text-sm hover:underline"
+                      >
+                        Download
                       </button>
                     </div>
                   ))}
@@ -677,6 +741,119 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
                 className="px-4 py-2 bg-[#003F6C] text-white rounded-lg hover:bg-[#002D4F] disabled:opacity-50"
               >
                 {submitting ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Document Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <h3 className="text-xl font-semibold mb-4">Upload Document</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Document Name *
+                </label>
+                <input
+                  type="text"
+                  value={uploadData.name}
+                  onChange={(e) => setUploadData({ ...uploadData, name: e.target.value })}
+                  placeholder="Protocol Document v2.0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Document Type *
+                </label>
+                <select
+                  value={uploadData.type}
+                  onChange={(e) => setUploadData({ ...uploadData, type: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                >
+                  <option value="PROTOCOL">Protocol</option>
+                  <option value="CONSENT_FORM">Consent Form</option>
+                  <option value="IRB_APPROVAL">IRB Approval</option>
+                  <option value="AMENDMENT">Amendment</option>
+                  <option value="SAE_REPORT">SAE Report</option>
+                  <option value="PROGRESS_REPORT">Progress Report</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Version
+                </label>
+                <input
+                  type="text"
+                  value={uploadData.version}
+                  onChange={(e) => setUploadData({ ...uploadData, version: e.target.value })}
+                  placeholder="1.0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={uploadData.description}
+                  onChange={(e) => setUploadData({ ...uploadData, description: e.target.value })}
+                  placeholder="Optional description..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  File * (PDF, Word, Excel, Images - Max 10MB)
+                </label>
+                <input
+                  type="file"
+                  onChange={(e) => setUploadData({ ...uploadData, file: e.target.files?.[0] || null })}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                  required
+                />
+                {uploadData.file && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    Selected: {uploadData.file.name} ({(uploadData.file.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadData({
+                    name: '',
+                    type: 'PROTOCOL',
+                    description: '',
+                    version: '1.0',
+                    file: null
+                  });
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadDocument}
+                disabled={submitting || !uploadData.name || !uploadData.type || !uploadData.file}
+                className="px-4 py-2 bg-[#003F6C] text-white rounded-lg hover:bg-[#002D4F] disabled:opacity-50"
+              >
+                {submitting ? 'Uploading...' : 'Upload Document'}
               </button>
             </div>
           </div>
