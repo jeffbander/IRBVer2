@@ -10,7 +10,13 @@
     "test": "node --test tests/**/*.test.js",
     "test:contract": "node --test tests/contract/*.test.js",
     "test:integration": "node --test tests/integration/*.test.js",
-    "test:unit": "node --test tests/unit/*.test.js"
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:report": "playwright show-report"
   },
   "keywords": [
     "healthcare",
@@ -37,8 +43,11 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.1",
     "@types/node": "^20.0.0",
+    "@winor30/mcp-server-datadog": "^1.6.0",
     "autoprefixer": "^10.4.21",
+    "playwright": "^1.55.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.13"
   },
