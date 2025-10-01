@@ -116,6 +116,24 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
     }
   };
 
+  const handleExport = async () => {
+    const params = new URLSearchParams();
+    if (statusFilter) params.append('status', statusFilter);
+
+    const response = await fetch(`/api/studies/${params.id}/participants/export?${params}`);
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `participants-${params.id}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { color: string; label: string }> = {
       SCREENING: { color: 'bg-yellow-100 text-yellow-800', label: 'Screening' },
@@ -196,7 +214,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
 
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="md:col-span-2">
               <div className="relative">
                 <svg
@@ -234,6 +252,17 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
               <option value="COMPLETED">Completed</option>
               <option value="WITHDRAWN">Withdrawn</option>
             </select>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={handleExport}
+              className="flex items-center px-4 py-2 text-[#003F6C] bg-white border border-[#003F6C] rounded-lg hover:bg-[#003F6C] hover:text-white transition-all"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export to CSV
+            </button>
           </div>
         </div>
 
