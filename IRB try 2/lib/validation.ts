@@ -42,9 +42,9 @@ export const validators = {
 
   protocolNumber: (value: string) => {
     if (!value) return null;
-    const protocolRegex = /^[A-Z]{2,4}-\d{4,6}$/;
+    const protocolRegex = /^[A-Z0-9]{2,10}-[A-Z0-9]{3,10}$/;
     if (!protocolRegex.test(value)) {
-      return 'Protocol number must be in format: ABC-1234 or ABCD-123456';
+      return 'Protocol number must be in format: ABC-1234 or TEST-ABC123';
     }
     return null;
   },
@@ -150,12 +150,9 @@ export const studyValidationSchema = {
   title: [validators.required, validators.minLength(5), validators.maxLength(200)],
   protocolNumber: [validators.required, validators.protocolNumber],
   description: [validators.required, validators.minLength(20), validators.maxLength(2000)],
-  principalInvestigatorId: [validators.required],
   type: [validators.required],
   riskLevel: [validators.required],
-  targetEnrollment: [validators.positiveNumber],
-  startDate: [validators.date],
-  endDate: [validators.date],
+  // targetEnrollment, startDate, and endDate are optional
 };
 
 // Participant validation schemas
