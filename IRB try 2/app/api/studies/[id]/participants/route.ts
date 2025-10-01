@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { validateForm, participantValidationSchema } from '@/lib/validation';
 
 // GET participants for a study
 export async function GET(
@@ -45,7 +46,18 @@ export async function POST(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const { subjectId, consentDate, enrollmentDate, status, groupAssignment } = await request.json();
+    const data = await request.json();
+
+    // Validate input data
+    const validation = validateForm(data, participantValidationSchema);
+    if (!validation.isValid) {
+      return NextResponse.json({
+        error: 'Validation failed',
+        details: validation.errors
+      }, { status: 400 });
+    }
+
+    const { subjectId, consentDate, enrollmentDate, status, groupAssignment } = data;
 
     // Verify study exists and is active
     const study = await prisma.study.findUnique({

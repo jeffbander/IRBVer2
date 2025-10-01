@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { validateForm, studyValidationSchema } from '@/lib/validation';
 
 // GET all studies (with filtering)
 export async function GET(request: NextRequest) {
@@ -71,6 +72,15 @@ export async function POST(request: NextRequest) {
     const permissions = user.role.permissions as string[];
     if (!permissions.includes('create_studies')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    // Validate input data
+    const validation = validateForm(data, studyValidationSchema);
+    if (!validation.isValid) {
+      return NextResponse.json({
+        error: 'Validation failed',
+        details: validation.errors
+      }, { status: 400 });
     }
 
     const study = await prisma.study.create({
