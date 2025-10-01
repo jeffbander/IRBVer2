@@ -16,7 +16,10 @@ interface Participant {
 export default function ParticipantsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,6 +49,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
       if (response.ok) {
         const data = await response.json();
         setParticipants(data);
+        setFilteredParticipants(data);
       }
     } catch (error) {
       console.error('Failed to fetch participants:', error);
@@ -53,6 +57,27 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
       setLoading(false);
     }
   };
+
+  // Filter participants based on search and status
+  useEffect(() => {
+    let filtered = participants;
+
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.subjectId.toLowerCase().includes(term) ||
+        p.groupAssignment?.toLowerCase().includes(term)
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter) {
+      filtered = filtered.filter(p => p.status === statusFilter);
+    }
+
+    setFilteredParticipants(filtered);
+  }, [searchTerm, statusFilter, participants]);
 
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +194,49 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
           </div>
         </div>
 
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="search"
+                  placeholder="Search by subject ID or group..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+            >
+              <option value="">All Statuses</option>
+              <option value="SCREENING">Screening</option>
+              <option value="ENROLLED">Enrolled</option>
+              <option value="ACTIVE">Active</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="WITHDRAWN">Withdrawn</option>
+            </select>
+          </div>
+        </div>
+
         {/* Participants Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <table className="w-full">
@@ -195,7 +263,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {participants.map((participant) => (
+              {filteredParticipants.map((participant) => (
                 <tr key={participant.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {participant.subjectId}
@@ -225,13 +293,15 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
             </tbody>
           </table>
 
-          {participants.length === 0 && (
+          {filteredParticipants.length === 0 && (
             <div className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <p className="mt-2 text-gray-600">No participants enrolled yet</p>
+              <p className="mt-2 text-gray-600">
+                {searchTerm || statusFilter ? 'No participants match your search criteria' : 'No participants enrolled yet'}
+              </p>
               <button
                 onClick={() => setShowEnrollModal(true)}
                 className="mt-4 text-[#003F6C] font-medium hover:underline"
