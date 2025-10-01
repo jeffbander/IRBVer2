@@ -115,6 +115,14 @@ export async function PUT(
   }
 }
 
+// PATCH update study (alias for PUT)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return PUT(request, { params });
+}
+
 // DELETE study
 export async function DELETE(
   request: NextRequest,
