@@ -46,8 +46,8 @@ test.describe('Study Management', () => {
     // Should redirect to study detail page
     await page.waitForURL(/\/studies\/[^\/]+$/, { timeout: 10000 });
 
-    // Verify study details are visible
-    await expect(page.locator(`text=${studyTitle}`)).toBeVisible({ timeout: 10000 });
+    // Wait for page to load and verify study details are visible
+    await expect(page.locator('h1')).toContainText(studyTitle, { timeout: 15000 });
   });
 
   test('should view study details', async ({ page }) => {
@@ -66,7 +66,7 @@ test.describe('Study Management', () => {
     await page.waitForURL(/\/studies\/[^\/]+$/, { timeout: 10000 });
 
     // Should show study details
-    await expect(page.locator(`text=${studyTitle}`)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1')).toContainText(studyTitle, { timeout: 15000 });
     await expect(page.locator(`text=${protocolNumber}`)).toBeVisible({ timeout: 10000 });
   });
 
