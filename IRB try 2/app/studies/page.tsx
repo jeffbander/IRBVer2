@@ -30,7 +30,9 @@ interface Study {
 export default function StudiesPage() {
   const router = useRouter();
   const [studies, setStudies] = useState<Study[]>([]);
+  const [filteredStudies, setFilteredStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState({
     status: '',
     type: '',
@@ -64,6 +66,7 @@ export default function StudiesPage() {
       if (response.ok) {
         const data = await response.json();
         setStudies(data);
+        setFilteredStudies(data);
       }
     } catch (error) {
       console.error('Failed to fetch studies:', error);
@@ -71,6 +74,22 @@ export default function StudiesPage() {
       setLoading(false);
     }
   };
+
+  // Filter studies based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredStudies(studies);
+      return;
+    }
+
+    const term = searchTerm.toLowerCase();
+    const filtered = studies.filter(study =>
+      study.title.toLowerCase().includes(term) ||
+      study.protocolNumber.toLowerCase().includes(term) ||
+      `${study.principalInvestigator.firstName} ${study.principalInvestigator.lastName}`.toLowerCase().includes(term)
+    );
+    setFilteredStudies(filtered);
+  }, [searchTerm, studies]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -182,9 +201,34 @@ export default function StudiesPage() {
           </div>
         )}
 
-        {/* Filters */}
+        {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="search"
+                  placeholder="Search by title, protocol number, or PI name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                />
+              </div>
+            </div>
+
             <select
               value={filter.status}
               onChange={(e) => setFilter({ ...filter, status: e.target.value })}
