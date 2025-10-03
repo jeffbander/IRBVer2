@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Testing
+coverage
+.nyc_output
+test-results
+playwright-report
+
+# Next.js
+.next
+out
+
+# Production
+dist
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+*.log
+*.log.*
+
+# Local env files
+.env*.local
+.env
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+
+# CI
+.github
+
+# Docs
+*.md
+!README.md
+
+# Artifacts
+artifacts
+demo-screenshots
+
+# Database
+prisma/*.db
+prisma/*.db-journal
+uploads
+
+# Other
+IRB2
+.claude
