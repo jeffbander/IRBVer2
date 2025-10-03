@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface Participant {
   id: string;
@@ -20,18 +21,18 @@ export default function ParticipantDetailsPage({
   params: { id: string; participantId: string };
 }) {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
     }
 
     fetchParticipant(token);
-  }, [params.id, params.participantId, router]);
+  }, [params.id, params.participantId, router, token]);
 
   const fetchParticipant = async (token: string) => {
     try {

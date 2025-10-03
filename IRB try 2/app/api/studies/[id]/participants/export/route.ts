@@ -21,7 +21,7 @@ export async function GET(
 
     const participants = await prisma.participant.findMany({
       where: whereClause,
-      orderBy: { enrolledAt: 'desc' },
+      orderBy: { enrollmentDate: 'desc' },
     });
 
     const study = await prisma.study.findUnique({
@@ -30,15 +30,14 @@ export async function GET(
     });
 
     // Generate CSV content
-    const csvHeader = 'Subject ID,Status,Group Assignment,Enrolled At,Consent Date,Withdrawal Date,Withdrawal Reason,Notes\n';
+    const csvHeader = 'Subject ID,Status,Group Assignment,Enrollment Date,Consent Date,Notes\n';
 
     const csvRows = participants.map(participant => {
-      const enrolledAt = new Date(participant.enrolledAt).toLocaleDateString();
+      const enrollmentDate = participant.enrollmentDate ? new Date(participant.enrollmentDate).toLocaleDateString() : '';
       const consentDate = participant.consentDate ? new Date(participant.consentDate).toLocaleDateString() : '';
-      const withdrawalDate = participant.withdrawalDate ? new Date(participant.withdrawalDate).toLocaleDateString() : '';
       const notes = (participant.notes || '').replace(/"/g, '""'); // Escape quotes in notes
 
-      return `"${participant.subjectId}","${participant.status}","${participant.groupAssignment || ''}","${enrolledAt}","${consentDate}","${withdrawalDate}","${participant.withdrawalReason || ''}","${notes}"`;
+      return `"${participant.subjectId}","${participant.status}","${participant.groupAssignment || ''}","${enrollmentDate}","${consentDate}","${notes}"`;
     }).join('\n');
 
     const csv = csvHeader + csvRows;

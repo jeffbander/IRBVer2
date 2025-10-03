@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface Document {
   id: string;
@@ -24,6 +25,7 @@ interface Document {
 
 export default function DocumentsPage() {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({
@@ -32,7 +34,6 @@ export default function DocumentsPage() {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;

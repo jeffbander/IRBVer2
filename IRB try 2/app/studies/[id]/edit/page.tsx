@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface Study {
   id: string;
@@ -18,6 +19,7 @@ interface Study {
 
 export default function EditStudyPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [study, setStudy] = useState<Study | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -33,14 +35,13 @@ export default function EditStudyPage({ params }: { params: { id: string } }) {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
     }
 
     fetchStudy(token);
-  }, [params.id, router]);
+  }, [params.id, router, token]);
 
   const fetchStudy = async (token: string) => {
     try {
@@ -76,7 +77,6 @@ export default function EditStudyPage({ params }: { params: { id: string } }) {
     setSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/studies/${params.id}`, {
         method: 'PATCH',
         headers: {

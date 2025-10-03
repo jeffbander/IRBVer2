@@ -1,9 +1,11 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
+import { config } from './env';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-this';
-const JWT_EXPIRES_IN = '7d';
+const JWT_SECRET = config.jwt.secret;
+const JWT_EXPIRES_IN = config.jwt.expiresIn;
+const BCRYPT_ROUNDS = config.security.bcryptRounds;
 
 export interface TokenPayload {
   userId: string;
@@ -16,7 +18,7 @@ export interface TokenPayload {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
@@ -24,6 +26,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 }
 
 export function generateToken(payload: TokenPayload): string {
+  // @ts-ignore - JWT_EXPIRES_IN type inference issue with string literals
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 

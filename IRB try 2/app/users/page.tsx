@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface User {
   id: string;
@@ -17,10 +18,10 @@ interface User {
 
 export default function UsersPage() {
   const router = useRouter();
+  const { token, user } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -31,16 +32,10 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
-    if (!token || !userData) {
+    if (!token || !user) {
       router.push('/login');
       return;
     }
-
-    const user = JSON.parse(userData);
-    setCurrentUser(user);
 
     // Check if user has permission to manage users
     if (!user.role?.permissions?.includes('manage_users')) {
@@ -49,7 +44,7 @@ export default function UsersPage() {
     }
 
     fetchUsers(token);
-  }, [router]);
+  }, [token, user, router]);
 
   const fetchUsers = async (token: string) => {
     try {
@@ -74,9 +69,10 @@ export default function UsersPage() {
       return;
     }
 
+    if (!token) return;
+
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
@@ -87,7 +83,7 @@ export default function UsersPage() {
       });
 
       if (response.ok) {
-        await fetchUsers(token!);
+        await fetchUsers(token);
         setShowCreateModal(false);
         setFormData({
           email: '',

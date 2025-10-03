@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface Participant {
   id: string;
@@ -19,6 +20,7 @@ interface Participant {
 
 export default function ParticipantsPage() {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({
@@ -27,14 +29,13 @@ export default function ParticipantsPage() {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
     }
 
     fetchParticipants(token);
-  }, [router]);
+  }, [router, token]);
 
   const fetchParticipants = async (token: string) => {
     try {

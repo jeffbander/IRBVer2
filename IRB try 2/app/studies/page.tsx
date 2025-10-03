@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface Study {
   id: string;
@@ -29,6 +30,7 @@ interface Study {
 
 export default function StudiesPage() {
   const router = useRouter();
+  const { token, user } = useAuthStore();
   const [studies, setStudies] = useState<Study[]>([]);
   const [filteredStudies, setFilteredStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,21 +39,16 @@ export default function StudiesPage() {
     status: '',
     type: '',
   });
-  const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'review'>('all');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
-    if (!token || !userData) {
+    if (!token || !user) {
       router.push('/login');
       return;
     }
 
-    setUser(JSON.parse(userData));
     fetchStudies(token);
-  }, [filter, router]);
+  }, [filter, router, token, user]);
 
   const fetchStudies = async (token: string) => {
     try {

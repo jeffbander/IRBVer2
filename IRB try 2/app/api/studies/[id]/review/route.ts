@@ -175,7 +175,7 @@ export async function POST(
             action: 'ACTIVATE_STUDY',
             entity: 'Study',
             entityId: params.id,
-            details: null
+            details: {}
           }
         });
 

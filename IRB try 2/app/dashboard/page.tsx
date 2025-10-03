@@ -2,22 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: {
-    id: string;
-    name: string;
-    permissions: any;
-  };
-}
+import { useAuthStore } from '@/lib/state';
 
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { token, user } = useAuthStore();
   const [stats, setStats] = useState({
     totalStudies: 0,
     activeStudies: 0,
@@ -27,19 +16,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     // Check authentication
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
-    if (!token || !userData) {
+    if (!token || !user) {
       router.push('/login');
       return;
     }
 
-    setUser(JSON.parse(userData));
-
     // Fetch dashboard stats
     fetchStats(token);
-  }, [router]);
+  }, [router, token, user]);
 
   const fetchStats = async (token: string) => {
     try {
@@ -59,8 +43,7 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    useAuthStore.getState().logout();
     router.push('/login');
   };
 

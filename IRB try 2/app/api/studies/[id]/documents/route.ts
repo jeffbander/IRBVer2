@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { DocumentType } from '@prisma/client';
 
 // GET - List documents for a study
 export async function GET(
@@ -19,7 +20,7 @@ export async function GET(
 
     const documents = await prisma.document.findMany({
       where: { studyId: params.id },
-      orderBy: { uploadedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       include: {
         uploadedBy: {
           select: {
@@ -118,11 +119,10 @@ export async function POST(
       data: {
         studyId: params.id,
         name,
-        type,
+        type: type as DocumentType,
         description: description || null,
         version,
-        fileName: filename,
-        filePath: `/uploads/studies/${params.id}/${filename}`,
+        filePath: path.join(process.cwd(), 'uploads', 'studies', params.id, filename),
         fileSize: file.size,
         mimeType: file.type,
         uploadedById: user.userId,

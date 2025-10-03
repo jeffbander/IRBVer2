@@ -39,7 +39,12 @@ export async function GET(
     return NextResponse.json(study);
   } catch (error) {
     console.error('Error fetching study:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
 
@@ -153,7 +158,7 @@ export async function DELETE(
         action: 'DELETE_STUDY',
         entity: 'Study',
         entityId: params.id,
-        details: null
+        details: {}
       }
     });
 

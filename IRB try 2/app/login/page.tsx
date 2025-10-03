@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,9 +35,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      // Store token in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Store token in Zustand state
+      useAuthStore.getState().login(data.token, data.user);
 
       // Redirect to dashboard
       router.push('/dashboard');
@@ -177,7 +177,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center text-sm text-gray-600">
           {isLogin ? (
             <>
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <button
                 onClick={() => setIsLogin(false)}
                 className="text-[#003F6C] font-medium hover:underline"

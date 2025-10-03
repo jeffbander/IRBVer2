@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface Participant {
   id: string;
@@ -15,6 +16,7 @@ interface Participant {
 
 export default function ParticipantsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,14 +33,13 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
     }
 
     fetchParticipants(token);
-  }, [params.id, router]);
+  }, [params.id, router, token]);
 
   const fetchParticipants = async (token: string) => {
     try {
@@ -84,7 +85,6 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
     setSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/studies/${params.id}/participants`, {
         method: 'POST',
         headers: {
@@ -117,10 +117,10 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
   };
 
   const handleExport = async () => {
-    const params = new URLSearchParams();
-    if (statusFilter) params.append('status', statusFilter);
+    const searchParams = new URLSearchParams();
+    if (statusFilter) searchParams.append('status', statusFilter);
 
-    const response = await fetch(`/api/studies/${params.id}/participants/export?${params}`);
+    const response = await fetch(`/api/studies/${params.id}/participants/export?${searchParams}`);
     if (response.ok) {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);

@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 export default function NewStudyPage() {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -24,7 +26,6 @@ export default function NewStudyPage() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
       if (!token) {
         router.push('/login');
         return;

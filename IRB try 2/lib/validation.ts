@@ -1,4 +1,6 @@
 // Validation utilities for forms
+import { sanitizeEmail, sanitizeProtocolNumber, sanitizeSubjectId } from './sanitize';
+
 export const validators = {
   required: (value: any) => {
     if (value === null || value === undefined || value === '') {
@@ -157,10 +159,12 @@ export const studyValidationSchema = {
 
 // Participant validation schemas
 export const participantValidationSchema = {
-  subjectId: [validators.required, validators.subjectId],
+  participantId: [validators.required], // Frontend sends participantId
+  subjectId: [validators.required], // Also accept subjectId for backward compatibility
   consentDate: [validators.required, validators.date, validators.pastDate],
-  enrollmentDate: [validators.required, validators.date, validators.pastDate],
-  status: [validators.required],
+  enrollmentDate: [validators.required, validators.date],
+  // Optional fields - no validation required
+  // site, notes, status, groupAssignment
 };
 
 // User validation schemas

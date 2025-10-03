@@ -2,13 +2,14 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
     // Check if user is authenticated
-    const token = localStorage.getItem('token');
+    const token = useAuthStore.getState().token;
     if (token) {
       router.push('/dashboard');
     } else {

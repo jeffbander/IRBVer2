@@ -26,11 +26,10 @@ export async function GET(
     }
 
     // Read file from disk
-    const filePath = path.join(process.cwd(), 'uploads', 'studies', params.id, document.fileName);
-    const fileBuffer = await readFile(filePath);
+    const fileBuffer = await readFile(document.filePath);
 
     // Return file with appropriate headers
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(fileBuffer as unknown as BodyInit, {
       headers: {
         'Content-Type': document.mimeType,
         'Content-Disposition': `attachment; filename="${document.name}"`,
@@ -70,11 +69,10 @@ export async function DELETE(
     }
 
     // Delete file from disk
-    const filePath = path.join(process.cwd(), 'uploads', 'studies', params.id, document.fileName);
     try {
-      await unlink(filePath);
+      await unlink(document.filePath);
     } catch (err) {
-      console.warn('File not found on disk:', filePath);
+      console.warn('File not found on disk:', document.filePath);
     }
 
     // Delete document record

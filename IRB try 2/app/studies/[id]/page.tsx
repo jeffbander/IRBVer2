@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface Study {
   id: string;
@@ -49,10 +50,10 @@ interface ReviewAction {
 
 export default function StudyDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { token, user } = useAuthStore();
   const [study, setStudy] = useState<Study | null>(null);
   const [reviewHistory, setReviewHistory] = useState<ReviewAction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewAction, setReviewAction] = useState('');
   const [reviewComments, setReviewComments] = useState('');
@@ -75,18 +76,14 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
-    if (!token || !userData) {
+    if (!token || !user) {
       router.push('/login');
       return;
     }
 
-    setUser(JSON.parse(userData));
     fetchStudy(token);
     fetchReviewHistory(token);
-  }, [params.id, router]);
+  }, [token, user, params.id, router]);
 
   const fetchStudy = async (token: string) => {
     try {
@@ -123,9 +120,10 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   };
 
   const handleReviewAction = async () => {
+    if (!token) return;
+
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/studies/${params.id}/review`, {
         method: 'POST',
         headers: {
@@ -139,8 +137,8 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
       });
 
       if (response.ok) {
-        await fetchStudy(token!);
-        await fetchReviewHistory(token!);
+        await fetchStudy(token);
+        await fetchReviewHistory(token);
         setShowReviewModal(false);
         setReviewComments('');
       } else {
@@ -160,9 +158,10 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
       return;
     }
 
+    if (!token) return;
+
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/studies/${params.id}/participants`, {
         method: 'POST',
         headers: {
@@ -173,7 +172,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
       });
 
       if (response.ok) {
-        await fetchStudy(token!);
+        await fetchStudy(token);
         setShowEnrollModal(false);
         setEnrollmentData({
           participantId: '',
@@ -201,9 +200,10 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
       return;
     }
 
+    if (!token) return;
+
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('file', uploadData.file);
       formData.append('name', uploadData.name);
@@ -220,7 +220,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
       });
 
       if (response.ok) {
-        await fetchStudy(token!);
+        await fetchStudy(token);
         setShowUploadModal(false);
         setUploadData({
           name: '',
@@ -283,7 +283,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
     );
   }
 
-  const isPI = study.principalInvestigator.id === user?.id || study.principalInvestigator.id === user?.userId;
+  const isPI = study.principalInvestigator.id === user?.id;
   const isReviewer = user?.role?.permissions?.includes('review_studies');
   const canApprove = user?.role?.permissions?.includes('approve_studies');
   const isAdmin = user?.role?.name === 'admin';
@@ -467,7 +467,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
                             by {action.user.firstName} {action.user.lastName} ({action.user.role.name})
                           </p>
                           {action.details?.comments && (
-                            <p className="mt-2 text-gray-700 italic">"{action.details.comments}"</p>
+                            <p className="mt-2 text-gray-700 italic">&quot;{action.details.comments}&quot;</p>
                           )}
                         </div>
                         <p className="text-sm text-gray-500">
@@ -533,9 +533,10 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
                         <p className="text-xs text-gray-500">{doc.type} - v{doc.version}</p>
                       </div>
                       <button
-                        onClick={async () => {
-                          const token = localStorage.getItem('token');
-                          window.open(`/api/studies/${params.id}/documents/${doc.id}?token=${token}`, '_blank');
+                        onClick={() => {
+                          if (token) {
+                            window.open(`/api/studies/${params.id}/documents/${doc.id}?token=${token}`, '_blank');
+                          }
                         }}
                         className="text-[#003F6C] text-sm hover:underline"
                       >

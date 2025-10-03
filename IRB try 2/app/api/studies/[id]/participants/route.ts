@@ -48,16 +48,33 @@ export async function POST(
 
     const data = await request.json();
 
-    // Validate input data
-    const validation = validateForm(data, participantValidationSchema);
-    if (!validation.isValid) {
+    // Support both participantId (from frontend) and subjectId (for backward compatibility)
+    const subjectId = data.participantId || data.subjectId;
+
+    if (!subjectId) {
       return NextResponse.json({
         error: 'Validation failed',
-        details: validation.errors
+        details: { participantId: 'Subject ID is required' }
       }, { status: 400 });
     }
 
-    const { subjectId, consentDate, enrollmentDate, status, groupAssignment } = data;
+    if (!data.consentDate) {
+      return NextResponse.json({
+        error: 'Validation failed',
+        details: { consentDate: 'Consent date is required' }
+      }, { status: 400 });
+    }
+
+    if (!data.enrollmentDate) {
+      return NextResponse.json({
+        error: 'Validation failed',
+        details: { enrollmentDate: 'Enrollment date is required' }
+      }, { status: 400 });
+    }
+
+    const { consentDate, enrollmentDate, site, notes } = data;
+    const status = data.status || 'ENROLLED';
+    const groupAssignment = data.groupAssignment || null;
 
     // Verify study exists and is active
     const study = await prisma.study.findUnique({
@@ -69,7 +86,11 @@ export async function POST(
     }
 
     if (study.status !== 'ACTIVE') {
-      return NextResponse.json({ error: 'Only active studies can enroll participants' }, { status: 400 });
+      return NextResponse.json({
+        error: `Only active studies can enroll participants. Current status: ${study.status}. Please activate the study first.`,
+        currentStatus: study.status,
+        requiredStatus: 'ACTIVE'
+      }, { status: 400 });
     }
 
     // Check if subject ID already exists in this study

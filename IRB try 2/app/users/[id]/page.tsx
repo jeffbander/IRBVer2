@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface User {
   id: string;
@@ -20,18 +21,18 @@ interface User {
 
 export default function UserDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
     }
 
     fetchUser(token);
-  }, [params.id, router]);
+  }, [params.id, router, token]);
 
   const fetchUser = async (token: string) => {
     try {
