@@ -5,9 +5,18 @@ import { authenticateRequest, checkPermission, getPaginationParams, getSortParam
 import { errorResponse, ValidationError } from '@/lib/errors';
 import { cache, cacheKeys, invalidateCache } from '@/lib/cache';
 import { sanitizeObject, sanitizeProtocolNumber, sanitizeString } from '@/lib/sanitize';
+import { rateLimiters } from '@/lib/rate-limit';
+import { cors, handlePreflight } from '@/lib/cors';
+
+export async function OPTIONS(request: NextRequest) {
+  return handlePreflight(request);
+}
 
 // GET all studies (with filtering, pagination, caching)
 export async function GET(request: NextRequest) {
+  // Apply rate limiting for read operations
+  const rateLimited = await rateLimiters.readOnly(request);
+  if (rateLimited) return rateLimited;
   try {
     // Authenticate
     const user = authenticateRequest(request);
@@ -68,7 +77,8 @@ export async function GET(request: NextRequest) {
       300000 // Cache for 5 minutes
     );
 
-    return NextResponse.json(studies);
+    const response = NextResponse.json(studies);
+    return cors(request, response);
   } catch (error) {
     return errorResponse(error, 'Failed to fetch studies');
   }
@@ -76,6 +86,9 @@ export async function GET(request: NextRequest) {
 
 // POST create new study
 export async function POST(request: NextRequest) {
+  // Apply rate limiting for write operations
+  const rateLimited = await rateLimiters.write(request);
+  if (rateLimited) return rateLimited;
   try {
     // Authenticate
     const user = authenticateRequest(request);
@@ -136,7 +149,8 @@ export async function POST(request: NextRequest) {
     // Invalidate cache
     invalidateCache.study(study.id);
 
-    return NextResponse.json(study, { status: 201 });
+    const response = NextResponse.json(study, { status: 201 });
+    return cors(request, response);
   } catch (error: any) {
     return errorResponse(error, 'Failed to create study');
   }

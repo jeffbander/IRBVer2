@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User management models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Will be hashed
+  firstName String
+  lastName  String
+  role      Role     @relation(fields: [roleId], references: [id])
+  roleId    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  studiesAsPI        Study[]       @relation("PrincipalInvestigator")
+  studiesAsReviewer  Study[]       @relation("Reviewer")
+  enrollments        Enrollment[]  @relation("EnrolledBy")
+  documents          Document[]    @relation("UploadedBy")
+  auditLogs          AuditLog[]
+
+  @@index([email])
+  @@index([roleId])
+  @@index([active])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions Json     // Store permissions as JSON
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// Existing models with updates
+model Study {
+  id                String       @id @default(cuid())
+  title             String
+  protocolNumber    String       @unique
+  principalInvestigatorId String
+  principalInvestigator User      @relation("PrincipalInvestigator", fields: [principalInvestigatorId], references: [id])
+  reviewerId        String?
+  reviewer          User?        @relation("Reviewer", fields: [reviewerId], references: [id])
+  status            StudyStatus  @default(DRAFT)
+  type              StudyType
+  description       String
+  startDate         DateTime?
+  endDate           DateTime?
+  targetEnrollment  Int?
+  currentEnrollment Int          @default(0)
+  irbApprovalDate   DateTime?
+  irbExpirationDate DateTime?
+  riskLevel         RiskLevel    @default(MINIMAL)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  participants      Participant[]
+  enrollments       Enrollment[]
+  documents         Document[]
+
+  @@index([status])
+  @@index([type])
+  @@index([principalInvestigatorId])
+  @@index([reviewerId])
+  @@index([createdAt])
+}
+
+model Participant {
+  id             String       @id @default(cuid())
+  studyId        String
+  study          Study        @relation(fields: [studyId], references: [id])
+  participantId  String       @unique
+  subjectId      String       // IRB subject identifier
+  firstName      String?
+  lastName       String?
+  dateOfBirth    DateTime?
+  email          String?
+  phone          String?
+  address        String?
+  consentDate    DateTime?
+  consentVersion String?
+  enrollmentDate DateTime?
+  groupAssignment String?     // Treatment/Control group
+  status         ParticipantStatus @default(SCREENING)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  enrollments    Enrollment[]
+
+  @@unique([studyId, subjectId])
+}
+
+model Enrollment {
+  id            String   @id @default(cuid())
+  studyId       String
+  study         Study    @relation(fields: [studyId], references: [id])
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+  enrollmentDate DateTime @default(now())
+  enrolledById  String
+  enrolledBy    User     @relation("EnrolledBy", fields: [enrolledById], references: [id])
+  status        EnrollmentStatus @default(ACTIVE)
+  withdrawalDate DateTime?
+  withdrawalReason String?
+  completionDate DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([studyId, participantId])
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  studyId      String
+  study        Study        @relation(fields: [studyId], references: [id])
+  name         String
+  type         DocumentType
+  version      String?
+  description  String?
+  filePath     String
+  fileSize     Int
+  mimeType     String
+  uploadedById String
+  uploadedBy   User         @relation("UploadedBy", fields: [uploadedById], references: [id])
+  status       DocumentStatus @default(ACTIVE)
+  approvalDate DateTime?
+  expirationDate DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+// Enums
+enum StudyStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  ACTIVE
+  SUSPENDED
+  CLOSED
+  COMPLETED
+}
+
+enum StudyType {
+  INTERVENTIONAL
+  OBSERVATIONAL
+  REGISTRY
+  SURVEY
+  OTHER
+}
+
+enum RiskLevel {
+  MINIMAL
+  MODERATE
+  HIGH
+}
+
+enum ParticipantStatus {
+  SCREENING
+  ENROLLED
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  LOST_TO_FOLLOWUP
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  TERMINATED
+}
+
+enum DocumentType {
+  PROTOCOL
+  CONSENT_FORM
+  AMENDMENT
+  APPROVAL_LETTER
+  ADVERSE_EVENT
+  PROGRESS_REPORT
+  OTHER
+}
+
+enum DocumentStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  EXPIRED
+}

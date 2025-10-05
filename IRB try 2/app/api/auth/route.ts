@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, createUser, hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { rateLimiters } from '@/lib/rate-limit';
+import { cors, handlePreflight } from '@/lib/cors';
+
+export async function OPTIONS(request: NextRequest) {
+  return handlePreflight(request);
+}
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting to auth endpoints
+  const rateLimited = await rateLimiters.auth(request);
+  if (rateLimited) return rateLimited;
+
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
 
@@ -26,7 +36,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      return NextResponse.json(result);
+      const response = NextResponse.json(result);
+      return cors(request, response);
     } catch (error) {
       console.error('Login error:', error);
       return NextResponse.json(
@@ -91,7 +102,8 @@ export async function POST(request: NextRequest) {
 
       const result = await authenticateUser(email, password);
 
-      return NextResponse.json(result);
+      const response = NextResponse.json(result);
+      return cors(request, response);
     } catch (error) {
       console.error('Registration error:', error);
       return NextResponse.json(
