@@ -56,18 +56,22 @@ test.describe('Participant Enrollment - Simplified Tests', () => {
   test('Should enroll participant through UI', async ({ page }) => {
     // Login through the UI to set Zustand state properly
     await page.goto(`${BASE_URL}/login`);
+    await page.waitForLoadState('networkidle');
+
     await page.fill('input[type="email"]', 'admin@irb.local');
     await page.fill('input[type="password"]', 'admin123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/dashboard');
+
+    // Click the submit button (not the tab button)
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL('**/dashboard', { timeout: 10000 });
 
     // Go directly to participants page
     await page.goto(`${BASE_URL}/studies/${studyId}/participants`);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000); // Give Zustand time to hydrate
 
-    // Wait for page to be fully loaded - check for page title or heading
-    await page.waitForSelector('text=Participants', { timeout: 10000 });
+    // Wait for page to be fully loaded - check for page heading
+    await page.waitForSelector('text=Participant Management', { timeout: 10000 });
 
     // Click Enroll Participant button
     const enrollButton = page.locator('button', { hasText: 'Enroll Participant' }).first();
@@ -96,14 +100,20 @@ test.describe('Participant Enrollment - Simplified Tests', () => {
   test('Should prevent duplicate enrollment through UI', async ({ page }) => {
     // Login through the UI to set Zustand state properly
     await page.goto(`${BASE_URL}/login`);
+    await page.waitForLoadState('networkidle');
+
     await page.fill('input[type="email"]', 'admin@irb.local');
     await page.fill('input[type="password"]', 'admin123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/dashboard');
+
+    // Click the submit button (not the tab button)
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL('**/dashboard', { timeout: 10000 });
 
     // Go to participants page
     await page.goto(`${BASE_URL}/studies/${studyId}/participants`);
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000); // Give Zustand time to hydrate
+    await page.waitForSelector('text=Participant Management', { timeout: 10000 });
 
     // Try to enroll same participant again
     await page.locator('button:has-text("Enroll Participant")').first().click();
