@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/state';
+import DocumentsList from './components/DocumentsList';
 
 interface Study {
   id: string;
@@ -284,7 +285,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   }
 
   const isPI = study.principalInvestigator.id === user?.id;
-  const isReviewer = user?.role?.permissions?.includes('review_studies');
+  const isReviewer = user?.role?.permissions?.includes('review_studies') ?? false;
   const canApprove = user?.role?.permissions?.includes('approve_studies');
   const isAdmin = user?.role?.name === 'admin';
 
@@ -511,44 +512,15 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
             </div>
 
             {/* Documents */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-gray-900">Documents</h3>
-                {(isPI || isReviewer) && (
-                  <button
-                    onClick={() => setShowUploadModal(true)}
-                    className="text-[#003F6C] text-sm hover:underline"
-                  >
-                    + Upload
-                  </button>
-                )}
-              </div>
-
-              {study.documents.length > 0 ? (
-                <div className="space-y-2">
-                  {study.documents.map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between py-2 border-b">
-                      <div>
-                        <p className="text-sm font-medium">{doc.name}</p>
-                        <p className="text-xs text-gray-500">{doc.type} - v{doc.version}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (token) {
-                            window.open(`/api/studies/${params.id}/documents/${doc.id}?token=${token}`, '_blank');
-                          }
-                        }}
-                        className="text-[#003F6C] text-sm hover:underline"
-                      >
-                        Download
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm">No documents uploaded</p>
-              )}
-            </div>
+            <DocumentsList
+              documents={study.documents}
+              studyId={params.id}
+              token={token!}
+              isPI={isPI}
+              isReviewer={isReviewer}
+              onUploadClick={() => setShowUploadModal(true)}
+              onDocumentUpdate={() => fetchStudy(token!)}
+            />
 
             {/* Participants */}
             <div className="bg-white rounded-lg shadow-sm p-6">

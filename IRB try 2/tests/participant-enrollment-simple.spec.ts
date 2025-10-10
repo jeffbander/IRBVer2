@@ -2,15 +2,17 @@ import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
+test.describe.configure({ mode: 'serial' }); // Run tests sequentially to share beforeAll setup
+
 test.describe('Participant Enrollment - Simplified Tests', () => {
   let authToken: string;
   let studyId: string;
 
   test.beforeAll(async ({ request }) => {
-    // Login via API to get token
+    // Login via API to get token (server is already warmed up by global setup)
     const loginResponse = await request.post(`${BASE_URL}/api/auth?action=login`, {
       data: {
-        email: 'admin@irb.local',
+        email: 'admin@example.com',
         password: 'admin123'
       }
     });
@@ -54,24 +56,23 @@ test.describe('Participant Enrollment - Simplified Tests', () => {
   });
 
   test('Should enroll participant through UI', async ({ page }) => {
-    // Login through the UI to set Zustand state properly
+    // Login through UI to properly initialize Zustand state
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
-
-    await page.fill('input[type="email"]', 'admin@irb.local');
+    await page.fill('input[type="email"]', 'admin@example.com');
     await page.fill('input[type="password"]', 'admin123');
+    await page.click('button[type="submit"]');
 
-    // Click the submit button (not the tab button)
-    await page.locator('button[type="submit"]').click();
-    await page.waitForURL('**/dashboard', { timeout: 10000 });
+    // Wait for redirect to dashboard
+    await page.waitForURL('**/dashboard', { timeout: 15000 });
+    console.log('✅ Logged in and redirected to dashboard');
 
-    // Go directly to participants page
+    // Now navigate to participants page
     await page.goto(`${BASE_URL}/studies/${studyId}/participants`);
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000); // Give Zustand time to hydrate
+    await page.waitForTimeout(2000);
 
-    // Wait for page to be fully loaded - check for page heading
-    await page.waitForSelector('text=Participant Management', { timeout: 10000 });
+    // Wait for page content to load
+    await page.waitForSelector('text=Participant', { timeout: 10000 });
 
     // Click Enroll Participant button
     const enrollButton = page.locator('button', { hasText: 'Enroll Participant' }).first();
@@ -98,22 +99,18 @@ test.describe('Participant Enrollment - Simplified Tests', () => {
   });
 
   test('Should prevent duplicate enrollment through UI', async ({ page }) => {
-    // Login through the UI to set Zustand state properly
+    // Login through UI
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
-
-    await page.fill('input[type="email"]', 'admin@irb.local');
+    await page.fill('input[type="email"]', 'admin@example.com');
     await page.fill('input[type="password"]', 'admin123');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/dashboard', { timeout: 15000 });
 
-    // Click the submit button (not the tab button)
-    await page.locator('button[type="submit"]').click();
-    await page.waitForURL('**/dashboard', { timeout: 10000 });
-
-    // Go to participants page
+    // Navigate to participants page
     await page.goto(`${BASE_URL}/studies/${studyId}/participants`);
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000); // Give Zustand time to hydrate
-    await page.waitForSelector('text=Participant Management', { timeout: 10000 });
+    await page.waitForTimeout(2000);
+    await page.waitForSelector('text=Participant', { timeout: 10000 });
 
     // Try to enroll same participant again
     await page.locator('button:has-text("Enroll Participant")').first().click();

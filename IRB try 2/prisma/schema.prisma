@@ -156,8 +156,60 @@ model Document {
   status       DocumentStatus @default(ACTIVE)
   approvalDate DateTime?
   expirationDate DateTime?
+
+  // Aigents integration fields
+  aigentsChainName String?
+  aigentsRunId     String?
+  aigentsStatus    String?      // pending, processing, completed, failed
+  aigentsAnalysis  String?      // AI analysis result
+  aigentstartedAt DateTime?
+  aigentsCompletedAt DateTime?
+  aigentsError     String?
+
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+
+  automationLogs AutomationLog[]
+
+  @@index([aigentsRunId])
+  @@index([aigentsStatus])
+}
+
+// Automation/Webhook tracking
+model AutomationLog {
+  id              String    @id @default(cuid())
+  chainName       String    // "Protocol analyzer", "Consent Form Reviewer", etc.
+  chainRunId      String    @unique // THE KEY - links request to webhook response
+
+  // Relations
+  documentId      String?
+  document        Document? @relation(fields: [documentId], references: [id])
+  studyId         String?
+  requestedBy     String?   // User ID who triggered
+
+  // Request tracking
+  requestData     String?   // JSON string of what we sent
+  requestedAt     DateTime  @default(now())
+
+  // Response tracking
+  webhookPayload  String?   // JSON string of complete webhook received
+  agentResponse   String?   // Parsed response text
+  agentReceivedAt DateTime?
+
+  // Status
+  isCompleted     Boolean   @default(false)
+  status          String    @default("processing") // processing|completed|failed
+  errorMessage    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([chainRunId])
+  @@index([documentId])
+  @@index([studyId])
+  @@index([isCompleted])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // Enums

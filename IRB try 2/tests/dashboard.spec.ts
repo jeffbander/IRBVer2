@@ -31,7 +31,7 @@ test.describe('Dashboard', () => {
   test('should display user information', async ({ page }) => {
     // Check if user info is displayed (admin user) - use more specific selectors
     await expect(page.locator('.text-sm.font-medium.text-gray-900')).toContainText('System');
-    await expect(page.locator('.text-xs.text-gray-500')).toContainText('admin@irb.local');
+    await expect(page.locator('.text-xs.text-gray-500')).toContainText('admin@example.com');
     await expect(page.locator('span.rounded-full.text-xs')).toContainText('ADMIN');
   });
 

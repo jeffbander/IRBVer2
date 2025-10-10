@@ -48,6 +48,11 @@ export function rateLimit(config: RateLimitConfig) {
   const { maxRequests, windowMs, skip } = config;
 
   return async (request: Request): Promise<Response | null> => {
+    // Skip rate limiting in test environment
+    if (process.env.NODE_ENV === 'test' || process.env.SKIP_RATE_LIMIT === 'true') {
+      return null;
+    }
+
     // Extract identifier (IP address or token)
     const identifier = getIdentifier(request);
 

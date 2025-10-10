@@ -24,6 +24,8 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
   const [statusFilter, setStatusFilter] = useState('');
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     subjectId: '',
     consentDate: '',
@@ -83,6 +85,8 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setError('');
+    setFieldErrors({});
 
     try {
       const response = await fetch(`/api/studies/${params.id}/participants`, {
@@ -97,6 +101,8 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
       if (response.ok) {
         await fetchParticipants(token!);
         setShowEnrollModal(false);
+        setError('');
+        setFieldErrors({});
         setFormData({
           subjectId: '',
           consentDate: '',
@@ -105,12 +111,19 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
           groupAssignment: '',
         });
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to enroll participant');
+        const data = await response.json();
+
+        // Handle validation errors with field-specific messages
+        if (data.code === 'VALIDATION_ERROR' && data.details) {
+          setFieldErrors(data.details);
+          setError('Please fix the validation errors below');
+        } else {
+          setError(data.error || 'Failed to enroll participant');
+        }
       }
     } catch (error) {
       console.error('Enrollment failed:', error);
-      alert('Failed to enroll participant');
+      setError('Failed to enroll participant');
     } finally {
       setSubmitting(false);
     }
@@ -359,8 +372,14 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                   onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
                   required
                   placeholder="e.g., SUBJ-001"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent ${
+                    fieldErrors.subjectId || fieldErrors.participantId ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
+                <p className="text-xs text-gray-500 mt-1">Format: SUBJ-001 to SUBJ-999999</p>
+                {(fieldErrors.subjectId || fieldErrors.participantId) && (
+                  <p className="text-xs text-red-600 mt-1">{fieldErrors.subjectId || fieldErrors.participantId}</p>
+                )}
               </div>
 
               <div>
@@ -372,8 +391,15 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                   value={formData.consentDate}
                   onChange={(e) => setFormData({ ...formData, consentDate: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                  max={new Date().toISOString().split('T')[0]}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent ${
+                    fieldErrors.consentDate ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
+                <p className="text-xs text-gray-500 mt-1">Must be in the past</p>
+                {fieldErrors.consentDate && (
+                  <p className="text-xs text-red-600 mt-1">{fieldErrors.consentDate}</p>
+                )}
               </div>
 
               <div>
@@ -416,10 +442,21 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                 />
               </div>
 
+              {/* Error Display */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowEnrollModal(false)}
+                  onClick={() => {
+                    setShowEnrollModal(false);
+                    setError('');
+                    setFieldErrors({});
+                  }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
                   Cancel

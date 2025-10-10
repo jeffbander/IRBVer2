@@ -1,0 +1,14 @@
+# Ignore everything by default
+*
+
+# But track these project directories
+!/.gitignore
+!/IRB try 2/
+!/SINAIAPPRESEARCH/
+
+# Ignore common files everywhere
+**/.DS_Store
+**/Thumbs.db
+**/desktop.ini
+**/*.tmp
+**/*.log

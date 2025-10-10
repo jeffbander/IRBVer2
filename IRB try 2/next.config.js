@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone', // Enable standalone output for Docker
+  output: process.env.NETLIFY ? undefined : 'standalone', // Standalone for Firebase, default for Netlify
   webpack: (config) => {
     config.watchOptions = {
       ...config.watchOptions,

@@ -13,7 +13,7 @@ test.describe('Authentication', () => {
   test('should login with valid credentials', async ({ page }) => {
     await page.goto('/login');
 
-    await page.fill('input[name="email"]', 'admin@irb.local');
+    await page.fill('input[name="email"]', 'admin@example.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
@@ -44,7 +44,7 @@ test.describe('Authentication', () => {
   test('should logout successfully', async ({ page }) => {
     // Login first
     await page.goto('/login');
-    await page.fill('input[name="email"]', 'admin@irb.local');
+    await page.fill('input[name="email"]', 'admin@example.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 

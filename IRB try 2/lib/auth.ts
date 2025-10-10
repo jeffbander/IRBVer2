@@ -69,20 +69,30 @@ export async function authenticateUser(email: string, password: string) {
     return null;
   }
 
+  const permissions = typeof user.role.permissions === 'string'
+    ? JSON.parse(user.role.permissions)
+    : user.role.permissions;
+
   const token = generateToken({
     userId: user.id,
     email: user.email,
     role: {
       id: user.role.id,
       name: user.role.name,
-      permissions: user.role.permissions,
+      permissions,
     },
   });
 
   const { password: _, ...userWithoutPassword } = user;
 
   return {
-    user: userWithoutPassword,
+    user: {
+      ...userWithoutPassword,
+      role: {
+        ...userWithoutPassword.role,
+        permissions,
+      },
+    },
     token,
   };
 }

@@ -9,6 +9,7 @@ export default function NewStudyPage() {
   const { token } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     title: '',
     protocolNumber: '',
@@ -23,6 +24,7 @@ export default function NewStudyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -45,7 +47,15 @@ export default function NewStudyPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create study');
+
+        // Handle validation errors with field-specific messages
+        if (data.code === 'VALIDATION_ERROR' && data.details) {
+          setFieldErrors(data.details);
+          setError('Please fix the validation errors below');
+        } else {
+          setError(data.error || 'Failed to create study');
+        }
+        return;
       }
 
       const study = await response.json();
@@ -114,9 +124,15 @@ export default function NewStudyPage() {
                   value={formData.protocolNumber}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent ${
+                    fieldErrors.protocolNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="e.g., IRB-2024-001"
                 />
+                <p className="text-xs text-gray-500 mt-1">Format: ABC-1234 or TEST-ABC123</p>
+                {fieldErrors.protocolNumber && (
+                  <p className="text-xs text-red-600 mt-1">{fieldErrors.protocolNumber}</p>
+                )}
               </div>
 
               <div>
@@ -184,9 +200,20 @@ export default function NewStudyPage() {
                 onChange={handleChange}
                 required
                 rows={6}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent ${
+                  fieldErrors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                }`}
                 placeholder="Provide a detailed description of your study, including objectives, methodology, and expected outcomes"
               />
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-gray-500">Minimum 20 characters</p>
+                <p className={`text-xs ${formData.description.length >= 20 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {formData.description.length}/20
+                </p>
+              </div>
+              {fieldErrors.description && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.description}</p>
+              )}
             </div>
           </div>
 

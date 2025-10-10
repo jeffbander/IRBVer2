@@ -64,7 +64,7 @@ test.describe('Form Validation', () => {
 
       // Change status to ACTIVE
       const token = await page.evaluate(() => localStorage.getItem('token'));
-      await fetch(`http://localhost:3001/api/studies/${studyId}`, {
+      await fetch(`http://localhost:3000/api/studies/${studyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

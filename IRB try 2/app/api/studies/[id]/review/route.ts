@@ -58,8 +58,18 @@ export async function POST(
 
       case 'approve':
         // Only reviewers can approve
-        const permissions = user.role.permissions as string[];
-        if (!permissions.includes('approve_studies')) {
+        let permissions = user.role.permissions;
+        // Ensure permissions is an array (could be string from JWT)
+        if (typeof permissions === 'string') {
+          try {
+            permissions = JSON.parse(permissions);
+          } catch {
+            permissions = [];
+          }
+        }
+
+        if (!Array.isArray(permissions) || !permissions.includes('approve_studies')) {
+          console.log('Permission check failed:', { permissions, hasApprove: permissions?.includes?.('approve_studies') });
           return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
         }
 

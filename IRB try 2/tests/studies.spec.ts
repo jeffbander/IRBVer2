@@ -27,9 +27,9 @@ test.describe('Study Management', () => {
     await page.click('button:has-text("New Study")');
     await expect(page).toHaveURL(/\/studies\/new/);
 
-    const uniqueId = generateUniqueId();
-    const studyTitle = `Test Clinical Study ${uniqueId}`;
-    const protocolNumber = `PROTO-TEST-${uniqueId}`;
+    const randomNum = Math.floor(Math.random() * 10000);
+    const studyTitle = `Test Clinical Study ${randomNum}`;
+    const protocolNumber = `PROTO-${randomNum}`;
 
     // Fill in study form
     await page.fill('input[name="title"]', studyTitle);
@@ -51,9 +51,9 @@ test.describe('Study Management', () => {
   });
 
   test('should view study details', async ({ page }) => {
-    const uniqueId = generateUniqueId();
-    const studyTitle = `Study Detail Test ${uniqueId}`;
-    const protocolNumber = `PROTO-DETAIL-${uniqueId}`;
+    const randomNum = Math.floor(Math.random() * 10000);
+    const studyTitle = `Study Detail Test ${randomNum}`;
+    const protocolNumber = `DETAIL-${randomNum}`;
 
     // Create a study first
     await page.click('button:has-text("New Study")');

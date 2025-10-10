@@ -18,11 +18,14 @@ async function main() {
         'create_studies',
         'edit_studies',
         'delete_studies',
+        'edit_all_studies',
         'manage_participants',
         'manage_users',
         'upload_documents',
         'delete_documents',
         'view_audit_logs',
+        'approve_studies',
+        'review_studies',
       ]),
     },
   });
@@ -107,10 +110,64 @@ async function main() {
 
   console.log('✓ Researcher user created: researcher@example.com / researcher123');
 
+  // Create PI user (same as researcher role)
+  const piPassword = await hashPassword('password123');
+  const pi = await prisma.user.upsert({
+    where: { email: 'pi@example.com' },
+    update: {},
+    create: {
+      email: 'pi@example.com',
+      password: piPassword,
+      firstName: 'Principal',
+      lastName: 'Investigator',
+      roleId: researcherRole.id,
+      active: true,
+    },
+  });
+
+  console.log('✓ PI user created: pi@example.com / password123');
+
+  // Create reviewer user
+  const reviewerPassword = await hashPassword('password123');
+  const reviewer = await prisma.user.upsert({
+    where: { email: 'reviewer@example.com' },
+    update: {},
+    create: {
+      email: 'reviewer@example.com',
+      password: reviewerPassword,
+      firstName: 'Jane',
+      lastName: 'Reviewer',
+      roleId: reviewerRole.id,
+      active: true,
+    },
+  });
+
+  console.log('✓ Reviewer user created: reviewer@example.com / password123');
+
+  // Create regular user
+  const userPassword = await hashPassword('password123');
+  const user = await prisma.user.upsert({
+    where: { email: 'user@example.com' },
+    update: {},
+    create: {
+      email: 'user@example.com',
+      password: userPassword,
+      firstName: 'Regular',
+      lastName: 'User',
+      roleId: coordinatorRole.id,
+      active: true,
+    },
+  });
+
+  console.log('✓ Regular user created: user@example.com / password123');
+
   console.log('\nDatabase seeded successfully!');
   console.log('\nLogin credentials:');
   console.log('  Admin: admin@example.com / admin123');
   console.log('  Researcher: researcher@example.com / researcher123');
+  console.log('  PI: pi@example.com / password123');
+  console.log('  Reviewer: reviewer@example.com / password123');
+  console.log('  User: user@example.com / password123');
 }
 
 main()

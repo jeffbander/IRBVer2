@@ -23,6 +23,8 @@ export default function EditStudyPage({ params }: { params: { id: string } }) {
   const [study, setStudy] = useState<Study | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     title: '',
     protocolNumber: '',
@@ -75,6 +77,8 @@ export default function EditStudyPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setError('');
+    setFieldErrors({});
 
     try {
       const response = await fetch(`/api/studies/${params.id}`, {
@@ -94,8 +98,15 @@ export default function EditStudyPage({ params }: { params: { id: string } }) {
       if (response.ok) {
         router.push(`/studies/${params.id}`);
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to update study');
+        const data = await response.json();
+
+        // Handle validation errors with field-specific messages
+        if (data.code === 'VALIDATION_ERROR' && data.details) {
+          setFieldErrors(data.details);
+          setError('Please fix the validation errors below');
+        } else {
+          setError(data.error || 'Failed to update study');
+        }
       }
     } catch (error) {
       console.error('Update failed:', error);
@@ -199,8 +210,19 @@ export default function EditStudyPage({ params }: { params: { id: string } }) {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 required
                 rows={6}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent ${
+                  fieldErrors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                }`}
               />
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-gray-500">Minimum 20 characters</p>
+                <p className={`text-xs ${formData.description.length >= 20 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {formData.description.length}/20
+                </p>
+              </div>
+              {fieldErrors.description && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.description}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -281,6 +303,13 @@ export default function EditStudyPage({ params }: { params: { id: string } }) {
                 />
               </div>
             </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
             <div className="flex justify-end space-x-4 pt-6">
               <button

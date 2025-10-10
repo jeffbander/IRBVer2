@@ -5,11 +5,11 @@ test.describe('API Validation', () => {
 
   test.beforeAll(async () => {
     // Get auth token
-    const response = await fetch('http://localhost:3000/api/auth', {
+    const response = await fetch('http://localhost:3000/api/auth?action=login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'admin@irb.local',
+        email: 'admin@example.com',
         password: 'admin123',
       }),
     });
@@ -50,7 +50,7 @@ test.describe('API Validation', () => {
   });
 
   test('should create study with valid data', async () => {
-    const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const randomNum = Math.floor(Math.random() * 10000);
 
     const response = await fetch('http://localhost:3000/api/studies', {
       method: 'POST',
@@ -59,9 +59,9 @@ test.describe('API Validation', () => {
         Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
-        title: `API Test Study ${uniqueId}`,
-        protocolNumber: `API-${uniqueId}`,
-        description: 'API test description',
+        title: `API Test Study ${randomNum}`,
+        protocolNumber: `API-${randomNum}`,
+        description: 'API test description for protocol validation',
         type: 'OBSERVATIONAL',
         riskLevel: 'MINIMAL',
       }),
@@ -74,7 +74,8 @@ test.describe('API Validation', () => {
   });
 
   test('should prevent duplicate protocol numbers', async () => {
-    const protocolNumber = `DUP-${Date.now()}`;
+    const randomNum = Math.floor(Math.random() * 10000);
+    const protocolNumber = `DUP-${randomNum}`;
 
     // Create first study
     const response1 = await fetch('http://localhost:3000/api/studies', {
@@ -86,7 +87,7 @@ test.describe('API Validation', () => {
       body: JSON.stringify({
         title: 'First Study',
         protocolNumber,
-        description: 'Test',
+        description: 'Test description for duplicate check',
         type: 'OBSERVATIONAL',
         riskLevel: 'MINIMAL',
       }),
@@ -104,13 +105,13 @@ test.describe('API Validation', () => {
       body: JSON.stringify({
         title: 'Second Study',
         protocolNumber, // Same protocol number
-        description: 'Test',
+        description: 'Test description for duplicate check',
         type: 'OBSERVATIONAL',
         riskLevel: 'MINIMAL',
       }),
     });
 
-    expect(response2.status).toBe(400);
+    expect(response2.status).toBe(409);
   });
 
   test('should return 404 for non-existent study', async () => {

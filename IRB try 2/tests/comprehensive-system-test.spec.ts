@@ -14,7 +14,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 1: Testing Authentication');
 
-    await page.goto('http://localhost:3001');
+    await page.goto('http://localhost:3000');
     await expect(page).toHaveURL(/login/);
     console.log('✓ Redirected to login page');
 
@@ -53,7 +53,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 3: Testing Studies - Create New Study');
 
-    await page.goto('http://localhost:3001/studies');
+    await page.goto('http://localhost:3000/studies');
     await page.waitForSelector('button:has-text("New Study")', { timeout: 10000 });
     console.log('✓ Studies page loaded');
 
@@ -102,13 +102,13 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 5: Testing Participants');
 
-    await page.goto(`http://localhost:3001/studies/${studyId}/participants`);
+    await page.goto(`http://localhost:3000/studies/${studyId}/participants`);
     await page.waitForTimeout(2000);
     console.log('✓ Participants page loaded');
 
     // First, change study status to ACTIVE so we can enroll participants
     const token = await page.evaluate(() => localStorage.getItem('token'));
-    await fetch(`http://localhost:3001/api/studies/${studyId}`, {
+    await fetch(`http://localhost:3000/api/studies/${studyId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 6: Testing Global Participants Page');
 
-    await page.goto('http://localhost:3001/participants');
+    await page.goto('http://localhost:3000/participants');
     await page.waitForTimeout(2000);
 
     const participantsPageLoaded = await page.locator('h1:has-text("All Participants")').isVisible().catch(() => false);
@@ -187,7 +187,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 7: Testing Documents');
 
-    await page.goto(`http://localhost:3001/studies/${studyId}`);
+    await page.goto(`http://localhost:3000/studies/${studyId}`);
     await page.waitForTimeout(1000);
 
     // Look for Documents tab or link
@@ -206,7 +206,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     }
 
     // Test global documents page
-    await page.goto('http://localhost:3001/documents');
+    await page.goto('http://localhost:3000/documents');
     await page.waitForTimeout(2000);
 
     const documentsPageLoaded = await page.locator('h1:has-text("Documents")').isVisible().catch(() => false);
@@ -220,7 +220,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 8: Testing User Management');
 
-    await page.goto('http://localhost:3001/users');
+    await page.goto('http://localhost:3000/users');
     await page.waitForTimeout(2000);
 
     const usersPageLoaded = await page.locator('h1:has-text("User Management")').isVisible().catch(() => false);
@@ -283,7 +283,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 9: Testing Search and Filter');
 
-    await page.goto('http://localhost:3001/studies');
+    await page.goto('http://localhost:3000/studies');
     await page.waitForTimeout(1000);
 
     // Test search
@@ -336,7 +336,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 11: Testing Study Editing');
 
-    await page.goto(`http://localhost:3001/studies/${studyId}`);
+    await page.goto(`http://localhost:3000/studies/${studyId}`);
     await page.waitForTimeout(1000);
 
     const editButton = page.locator('button:has-text("Edit")').first();
@@ -372,7 +372,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     ];
 
     for (const testPage of pages) {
-      await page.goto(`http://localhost:3001${testPage.url}`);
+      await page.goto(`http://localhost:3000${testPage.url}`);
       await page.waitForTimeout(2000);
 
       const pageLoaded = await page.locator('h1').isVisible({ timeout: 10000 }).catch(() => false);
@@ -389,7 +389,7 @@ test.describe('Comprehensive System Test - All Sections', () => {
     // ==========================================
     console.log('📋 SECTION 13: Testing Logout');
 
-    await page.goto('http://localhost:3001/dashboard');
+    await page.goto('http://localhost:3000/dashboard');
     await page.waitForTimeout(1000);
 
     const logoutButton = page.locator('button:has-text("Logout")');

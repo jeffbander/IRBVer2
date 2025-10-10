@@ -136,7 +136,7 @@ export function logRequest(request: Request, options: {
 
   if (startTime) {
     const duration = Date.now() - startTime;
-    logger.addContext({ duration: `${duration}ms` });
+    logger.addContext({ duration });
   }
 
   logger.info(`${request.method} ${url.pathname}`);
@@ -163,7 +163,7 @@ export function logResponse(
     path: url.pathname,
     userId,
     status,
-    duration: `${duration}ms`,
+    duration,
     ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
   });
 

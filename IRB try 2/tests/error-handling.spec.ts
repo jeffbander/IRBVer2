@@ -18,13 +18,14 @@ test.describe('Error Handling', () => {
   });
 
   test('should show error for duplicate protocol number', async ({ page }) => {
-    const protocolNumber = `DUP-${Date.now()}`;
+    const randomNum = Math.floor(Math.random() * 10000);
+    const protocolNumber = `DUP-${randomNum}`;
 
     // Create first study
     await page.goto('/studies/new');
     await page.fill('input[name="title"]', 'First Study');
     await page.fill('input[name="protocolNumber"]', protocolNumber);
-    await page.fill('textarea[name="description"]', 'Test');
+    await page.fill('textarea[name="description"]', 'Test description for duplicate check');
     await page.click('button[type="submit"]');
 
     await page.waitForURL(/\/studies\/[^\/]+$/, { timeout: 10000 });
@@ -33,7 +34,7 @@ test.describe('Error Handling', () => {
     await page.goto('/studies/new');
     await page.fill('input[name="title"]', 'Second Study');
     await page.fill('input[name="protocolNumber"]', protocolNumber);
-    await page.fill('textarea[name="description"]', 'Test');
+    await page.fill('textarea[name="description"]', 'Test description for duplicate check');
     await page.click('button[type="submit"]');
 
     // Should show error message
@@ -64,12 +65,12 @@ test.describe('Error Handling', () => {
 
   test('should validate participant enrollment data', async ({ page }) => {
     // First need an active study
-    const uniqueId = `${Date.now()}`;
+    const randomNum = Math.floor(Math.random() * 10000);
 
     await page.goto('/studies/new');
-    await page.fill('input[name="title"]', `Test Study ${uniqueId}`);
-    await page.fill('input[name="protocolNumber"]', `TEST-${uniqueId}`);
-    await page.fill('textarea[name="description"]', 'Test');
+    await page.fill('input[name="title"]', `Test Study ${randomNum}`);
+    await page.fill('input[name="protocolNumber"]', `TEST-${randomNum}`);
+    await page.fill('textarea[name="description"]', 'Test description for participant enrollment validation');
     await page.click('button[type="submit"]');
 
     await page.waitForURL(/\/studies\/[^\/]+$/, { timeout: 10000 });
@@ -86,10 +87,10 @@ test.describe('Error Handling', () => {
     // Visit participant page for a study with no participants
     await page.goto('/studies/new');
 
-    const uniqueId = `${Date.now()}`;
-    await page.fill('input[name="title"]', `Empty Study ${uniqueId}`);
-    await page.fill('input[name="protocolNumber"]', `EMPTY-${uniqueId}`);
-    await page.fill('textarea[name="description"]', 'Test');
+    const randomNum = Math.floor(Math.random() * 10000);
+    await page.fill('input[name="title"]', `Empty Study ${randomNum}`);
+    await page.fill('input[name="protocolNumber"]', `EMPTY-${randomNum}`);
+    await page.fill('textarea[name="description"]', 'Test description for empty state handling');
     await page.click('button[type="submit"]');
 
     await page.waitForURL(/\/studies\/[^\/]+$/, { timeout: 10000 });

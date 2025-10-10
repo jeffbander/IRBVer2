@@ -62,6 +62,64 @@ export async function POST(
       return NextResponse.json({ error: 'Study not found' }, { status: 404 });
     }
 
+    const contentType = request.headers.get('content-type') || '';
+
+    // Check if it's JSON (for testing/API) or FormData (for file upload)
+    if (contentType.includes('application/json')) {
+      // Handle JSON request (no actual file, just metadata)
+      const body = await request.json();
+      const { title, documentType, version = '1.0', filePath: mockFilePath, fileSize = 1024 } = body;
+
+      if (!title || !documentType) {
+        return NextResponse.json({ error: 'Title and documentType are required' }, { status: 400 });
+      }
+
+      // Create document record without actual file
+      const document = await prisma.document.create({
+        data: {
+          studyId: params.id,
+          name: title,
+          type: documentType as DocumentType,
+          description: null,
+          version,
+          filePath: mockFilePath || `/uploads/mock/${Date.now()}-document.pdf`,
+          fileSize: fileSize,
+          mimeType: 'application/pdf',
+          uploadedById: user.userId,
+        },
+        include: {
+          uploadedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      // Create audit log
+      await prisma.auditLog.create({
+        data: {
+          userId: user.userId,
+          action: 'UPLOAD_DOCUMENT',
+          entity: 'Document',
+          entityId: document.id,
+          details: {
+            studyId: params.id,
+            documentName: title,
+            documentType: documentType,
+            fileSize: fileSize,
+            method: 'json'
+          }
+        }
+      });
+
+      return NextResponse.json(document, { status: 201 });
+    }
+
+    // Handle FormData request (actual file upload)
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const name = formData.get('name') as string;
