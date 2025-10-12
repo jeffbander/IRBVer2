@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: [['html', { outputFolder: 'artifacts/reports/playwright' }]],
   globalSetup: './tests/global-setup.ts',
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3002',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -38,7 +38,7 @@ export default defineConfig({
   ...(process.env.CI ? {
     webServer: {
       command: 'npm run dev',
-      url: process.env.BASE_URL || 'http://localhost:3002',
+      url: process.env.BASE_URL || 'http://localhost:3000',
       reuseExistingServer: false,
       timeout: 120000,
     },

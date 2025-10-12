@@ -42,7 +42,7 @@ export async function GET(
   }
 }
 
-// DELETE - Delete a document
+// DELETE - Delete a document (Admin only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string; documentId: string } }
@@ -54,10 +54,25 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    const permissions = user.role.permissions as string[];
 
-    if (!permissions.includes('manage_documents')) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Check if user has delete_documents permission (admin only)
+    const userWithRole = await prisma.user.findUnique({
+      where: { id: user.userId },
+      include: { role: true },
+    });
+
+    if (!userWithRole) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const permissions = userWithRole.role.permissions as string[];
+    const canDelete = permissions.includes('delete_documents');
+
+    if (!canDelete) {
+      return NextResponse.json(
+        { error: 'Permission denied. Only administrators can delete documents.' },
+        { status: 403 }
+      );
     }
 
     const document = await prisma.document.findUnique({
@@ -90,12 +105,16 @@ export async function DELETE(
         details: {
           studyId: params.id,
           documentName: document.name,
-          documentType: document.type
+          documentType: document.type,
+          version: document.version,
+          ocrStatus: document.ocrStatus,
         }
       }
     });
 
-    return NextResponse.json({ success: true, message: 'Document deleted' });
+    console.log(`🗑️ Document deleted: ${document.name} (v${document.version}) by user ${user.userId}`);
+
+    return NextResponse.json({ success: true, message: 'Document deleted successfully' });
   } catch (error) {
     console.error('Error deleting document:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

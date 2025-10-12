@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { hashPassword } from '../lib/auth';
+import { hashPassword } from '../lib/auth.js';
 
 const prisma = new PrismaClient();
 
@@ -55,6 +55,7 @@ async function main() {
       permissions: JSON.stringify([
         'view_studies',
         'review_studies',
+        'approve_studies',
         'view_documents',
       ]),
     },
@@ -79,10 +80,10 @@ async function main() {
   // Create admin user
   const adminPassword = await hashPassword('admin123');
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
+    where: { email: 'admin@irb.test' },
     update: {},
     create: {
-      email: 'admin@example.com',
+      email: 'admin@irb.test',
       password: adminPassword,
       firstName: 'Admin',
       lastName: 'User',
@@ -91,7 +92,7 @@ async function main() {
     },
   });
 
-  console.log('✓ Admin user created: admin@example.com / admin123');
+  console.log('✓ Admin user created: admin@irb.test / admin123');
 
   // Create test researcher
   const researcherPassword = await hashPassword('researcher123');
@@ -163,7 +164,7 @@ async function main() {
 
   console.log('\nDatabase seeded successfully!');
   console.log('\nLogin credentials:');
-  console.log('  Admin: admin@example.com / admin123');
+  console.log('  Admin: admin@irb.test / admin123');
   console.log('  Researcher: researcher@example.com / researcher123');
   console.log('  PI: pi@example.com / password123');
   console.log('  Reviewer: reviewer@example.com / password123');

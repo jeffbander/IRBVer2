@@ -518,6 +518,8 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
               token={token!}
               isPI={isPI}
               isReviewer={isReviewer}
+              isAdmin={isAdmin}
+              userPermissions={(user?.role?.permissions as string[]) || []}
               onUploadClick={() => setShowUploadModal(true)}
               onDocumentUpdate={() => fetchStudy(token!)}
             />

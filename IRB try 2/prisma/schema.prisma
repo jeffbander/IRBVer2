@@ -146,7 +146,7 @@ model Document {
   study        Study        @relation(fields: [studyId], references: [id])
   name         String
   type         DocumentType
-  version      String?
+  version      Int          @default(1)  // Auto-incremented version number
   description  String?
   filePath     String
   fileSize     Int
@@ -156,6 +156,19 @@ model Document {
   status       DocumentStatus @default(ACTIVE)
   approvalDate DateTime?
   expirationDate DateTime?
+
+  // OCR fields
+  ocrContent   String?      // Extracted text content from OCR
+  ocrStatus    String?      // pending, processing, completed, failed, not_supported
+  ocrError     String?      // Error message if OCR failed
+  ocrModel     String?      // Model used for OCR (e.g., "claude-3-5-sonnet-20241022")
+  ocrProcessedAt DateTime?  // When OCR was completed
+  isOcrSupported Boolean    @default(false) // Whether file type supports OCR
+
+  // Document versioning
+  parentDocumentId String?  // Links to previous version of same document
+  isLatestVersion Boolean   @default(true) // Only latest version is true
+  versionNotes String?      // Notes about what changed in this version
 
   // Aigents integration fields
   aigentsChainName String?
@@ -171,8 +184,12 @@ model Document {
 
   automationLogs AutomationLog[]
 
+  @@index([studyId])
+  @@index([parentDocumentId])
   @@index([aigentsRunId])
   @@index([aigentsStatus])
+  @@index([ocrStatus])
+  @@index([isLatestVersion])
 }
 
 // Automation/Webhook tracking

@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function POST() {
   try {
@@ -14,10 +12,13 @@ export async function POST() {
     }
 
     // Delete in reverse order of dependencies
+    await prisma.automationLog.deleteMany({});
+    await prisma.auditLog.deleteMany({});
+    await prisma.enrollment.deleteMany({});
     await prisma.document.deleteMany({});
     await prisma.participant.deleteMany({});
     await prisma.study.deleteMany({});
-    // Keep users for authentication
+    // Keep users and roles for authentication
 
     return NextResponse.json({
       success: true,
