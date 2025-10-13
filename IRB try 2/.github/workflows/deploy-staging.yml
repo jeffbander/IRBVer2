@@ -1,0 +1,145 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_STAGING }}
+  GCP_REGION: us-central1
+  CLOUD_RUN_SERVICE: irb-system-staging
+  IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID_STAGING }}/irb-system-staging
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: |
+          npm run lint
+          npm run test
+        env:
+          DATABASE_URL: file:./test.db
+          JWT_SECRET: test-secret
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_STAGING }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.IMAGE_NAME }}:latest \
+            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL_STAGING }} \
+            .
+          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.IMAGE_NAME }}:latest
+
+      - name: Run database migrations
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+            --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 10 \
+            --memory 512Mi \
+            --cpu 1 \
+            --timeout 300 \
+            --set-env-vars "NODE_ENV=staging" \
+            --set-secrets "DATABASE_URL=DATABASE_URL_STAGING:latest,\
+            JWT_SECRET=JWT_SECRET_STAGING:latest,\
+            AIGENTS_API_URL=AIGENTS_API_URL:latest,\
+            AIGENTS_EMAIL=AIGENTS_EMAIL:latest,\
+            AIGENTS_WEBHOOK_SECRET=AIGENTS_WEBHOOK_SECRET_STAGING:latest,\
+            AIGENTS_FOLDER_ID=AIGENTS_FOLDER_ID:latest" \
+            --revision-suffix ${{ github.sha }} \
+            --format=json | jq -r '.status.url' | tee deploy_url.txt
+
+          echo "url=$(cat deploy_url.txt)" >> $GITHUB_OUTPUT
+
+      - name: Wait for service to be ready
+        run: |
+          URL=${{ steps.deploy.outputs.url }}
+          for i in {1..30}; do
+            if curl -f -s "$URL/api/health" > /dev/null; then
+              echo "Service is healthy"
+              exit 0
+            fi
+            echo "Waiting for service to be ready... ($i/30)"
+            sleep 10
+          done
+          echo "Service failed to become healthy"
+          exit 1
+
+      - name: Run smoke tests
+        run: |
+          URL=${{ steps.deploy.outputs.url }}
+
+          # Test health endpoint
+          curl -f "$URL/api/health" || exit 1
+
+          # Test auth endpoint exists
+          curl -f -X POST "$URL/api/auth" -H "Content-Type: application/json" || exit 1
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Staging deployment successful: ${{ steps.deploy.outputs.url }}"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          PREVIOUS_REVISION=$(gcloud run revisions list \
+            --service ${{ env.CLOUD_RUN_SERVICE }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --filter="status.conditions.status:True" \
+            --limit 2 \
+            --format="value(name)" | tail -n 1)
+
+          if [ ! -z "$PREVIOUS_REVISION" ]; then
+            gcloud run services update-traffic ${{ env.CLOUD_RUN_SERVICE }} \
+              --to-revisions $PREVIOUS_REVISION=100 \
+              --platform managed \
+              --region ${{ env.GCP_REGION }}
+            echo "Rolled back to revision: $PREVIOUS_REVISION"
+          fi

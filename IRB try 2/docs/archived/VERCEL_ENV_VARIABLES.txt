@@ -1,0 +1,66 @@
+========================================
+VERCEL ENVIRONMENT VARIABLES
+========================================
+
+Go to: https://vercel.com/jeff-banders-projects
+Click your project → Settings → Environment Variables
+
+Add these 6 variables (copy/paste the values exactly):
+
+========================================
+
+Variable Name: DATABASE_URL
+Value: file:./dev.db
+Environment: Production
+✓ Add
+
+----------------------------------------
+
+Variable Name: JWT_SECRET
+Value: prod-jwt-secret-change-this-to-minimum-32-random-characters
+Environment: Production
+✓ Add
+
+----------------------------------------
+
+Variable Name: SESSION_SECRET
+Value: prod-session-secret-change-this-to-minimum-32-random-chars
+Environment: Production
+✓ Add
+
+----------------------------------------
+
+Variable Name: AIGENTS_API_URL
+Value: https://start-chain-run-943506065004.us-central1.run.app
+Environment: Production
+✓ Add
+
+----------------------------------------
+
+Variable Name: AIGENTS_EMAIL
+Value: notifications@providerloop.com
+Environment: Production
+✓ Add
+
+----------------------------------------
+
+Variable Name: NODE_ENV
+Value: production
+Environment: Production
+✓ Add
+
+========================================
+
+After adding all variables:
+1. Go to Deployments tab
+2. Click the "..." menu on your latest deployment
+3. Click "Redeploy"
+4. Wait ~2-3 minutes
+5. Your app will be live with all environment variables! 🎉
+
+========================================
+
+Your deployment URL will be something like:
+https://irb-management-system-[random].vercel.app
+
+========================================

@@ -1,0 +1,76 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          primary: '#06ABEB',
+          'primary-hover': '#0891C7',
+          accent: '#DC298D',
+          heading: '#212070',
+          navy: '#00002D',
+        },
+        status: {
+          success: '#10B981',
+          warning: '#F59E0B',
+          error: '#EF4444',
+          info: '#06ABEB',
+        },
+        semantic: {
+          'draft-bg': '#F3F4F6',
+          'draft-text': '#1F2937',
+          'pending-bg': '#FEF3C7',
+          'pending-text': '#92400E',
+          'approved-bg': '#D1FAE5',
+          'approved-text': '#065F46',
+          'active-bg': '#DBEAFE',
+          'active-text': '#1E40AF',
+          'rejected-bg': '#FEE2E2',
+          'rejected-text': '#991B1B',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
+      fontSize: {
+        display: ['60px', { lineHeight: '72px', fontWeight: '700' }],
+        h1: ['36px', { lineHeight: '44px', fontWeight: '700' }],
+        h2: ['30px', { lineHeight: '38px', fontWeight: '600' }],
+        h3: ['24px', { lineHeight: '32px', fontWeight: '600' }],
+        h4: ['20px', { lineHeight: '28px', fontWeight: '600' }],
+        'body-large': ['18px', { lineHeight: '28px', fontWeight: '400' }],
+        body: ['16px', { lineHeight: '24px', fontWeight: '400' }],
+        'body-small': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+        caption: ['12px', { lineHeight: '16px', fontWeight: '500' }],
+        overline: ['11px', { lineHeight: '16px', fontWeight: '600', letterSpacing: '0.5px' }],
+      },
+      spacing: {
+        1: '4px',
+        2: '8px',
+        3: '12px',
+        4: '16px',
+        5: '20px',
+        6: '24px',
+        8: '32px',
+        10: '40px',
+        12: '48px',
+        16: '64px',
+      },
+      borderRadius: {
+        sm: '6px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+        full: '9999px',
+      },
+      boxShadow: {
+        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        md: '0 2px 8px 0 rgba(0, 0, 0, 0.1)',
+        lg: '0 4px 16px 0 rgba(0, 0, 0, 0.12)',
+        xl: '0 8px 24px 0 rgba(0, 0, 0, 0.15)',
+        '2xl': '0 16px 48px 0 rgba(0, 0, 0, 0.2)',
+        focus: '0 0 0 3px rgba(6, 171, 235, 0.1)',
+      },
+    },
+  },
+};

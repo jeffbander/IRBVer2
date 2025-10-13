@@ -1,0 +1,80 @@
+================================================================================
+                    AIGENTS WEBHOOK - QUICK REFERENCE
+================================================================================
+
+📍 WEBHOOK URL FOR AIGENTS:
+   https://7a42f175c798.ngrok.app/api/webhooks/aigents
+
+📊 MONITORING DASHBOARD:
+   http://127.0.0.1:4040
+
+✅ STATUS: ACTIVE & WORKING
+   - Endpoint is live and responding
+   - Total automations: 2 completed, 0 pending
+   - Ready to receive Aigents callbacks
+
+================================================================================
+
+🔧 CONFIGURE IN AIGENTS:
+
+1. Go to your Aigents chain settings
+2. Add webhook URL: https://7a42f175c798.ngrok.app/api/webhooks/aigents
+3. Method: POST
+4. Content-Type: application/json
+
+Required Fields in Webhook Payload:
+   - chain_run_id or run_id (to match request → response)
+   - agentResponse or summ (the AI analysis result)
+   - status: "completed" or "failed"
+
+================================================================================
+
+🧪 TEST COMMANDS:
+
+Health Check:
+   curl https://7a42f175c798.ngrok.app/api/webhooks/aigents
+
+Test Webhook (PowerShell):
+   $body = @{
+       chain_run_id = "R_test123"
+       status = "completed"
+       agentResponse = "Test analysis completed"
+   } | ConvertTo-Json
+
+   Invoke-RestMethod -Uri "https://7a42f175c798.ngrok.app/api/webhooks/aigents" `
+       -Method POST `
+       -Body $body `
+       -ContentType "application/json"
+
+================================================================================
+
+📍 LOCAL URLS:
+
+IRB App:        http://localhost:3009
+Webhook:        http://localhost:3009/api/webhooks/aigents
+Ngrok Dashboard: http://127.0.0.1:4040
+
+================================================================================
+
+⚠️  IMPORTANT NOTES:
+
+1. This URL will change when ngrok restarts
+   - Update Aigents webhook settings if tunnel is restarted
+   - For permanent URL, reserve domain at: https://dashboard.ngrok.com/domains
+
+2. Both processes must be running:
+   - IRB App (npm run dev -- -p 3009)
+   - Ngrok tunnel (running in background)
+
+3. Session Limit:
+   - Your account supports 1 ngrok session at a time
+   - Cannot run IRB and HeartVoice tunnels simultaneously
+   - Switch between apps or upgrade plan
+
+================================================================================
+
+📖 FULL DOCUMENTATION:
+
+See: AIGENTS_WEBHOOK_NGROK_CONFIG.md
+
+================================================================================

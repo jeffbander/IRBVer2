@@ -1,0 +1,287 @@
+// Production Prisma schema file for PostgreSQL
+// This schema is for Cloud SQL (PostgreSQL) deployment
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User management models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Hashed with bcrypt
+  firstName String
+  lastName  String
+  role      Role     @relation(fields: [roleId], references: [id])
+  roleId    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  studiesAsPI        Study[]       @relation("PrincipalInvestigator")
+  studiesAsReviewer  Study[]       @relation("Reviewer")
+  enrollments        Enrollment[]  @relation("EnrolledBy")
+  documents          Document[]    @relation("UploadedBy")
+  auditLogs          AuditLog[]
+
+  @@index([email])
+  @@index([roleId])
+  @@index([active])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions Json     // Store permissions as JSON
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Study {
+  id                String       @id @default(cuid())
+  title             String
+  protocolNumber    String       @unique
+  principalInvestigatorId String
+  principalInvestigator User      @relation("PrincipalInvestigator", fields: [principalInvestigatorId], references: [id])
+  reviewerId        String?
+  reviewer          User?        @relation("Reviewer", fields: [reviewerId], references: [id])
+  status            StudyStatus  @default(DRAFT)
+  type              StudyType
+  description       String
+  startDate         DateTime?
+  endDate           DateTime?
+  targetEnrollment  Int?
+  currentEnrollment Int          @default(0)
+  irbApprovalDate   DateTime?
+  irbExpirationDate DateTime?
+  riskLevel         RiskLevel    @default(MINIMAL)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  participants      Participant[]
+  enrollments       Enrollment[]
+  documents         Document[]
+
+  @@index([status])
+  @@index([type])
+  @@index([principalInvestigatorId])
+  @@index([reviewerId])
+  @@index([createdAt])
+  @@map("studies")
+}
+
+model Participant {
+  id             String       @id @default(cuid())
+  studyId        String
+  study          Study        @relation(fields: [studyId], references: [id])
+  participantId  String       @unique
+  subjectId      String       // IRB subject identifier
+  firstName      String?
+  lastName       String?
+  dateOfBirth    DateTime?
+  email          String?
+  phone          String?
+  address        String?
+  consentDate    DateTime?
+  consentVersion String?
+  enrollmentDate DateTime?
+  groupAssignment String?     // Treatment/Control group
+  status         ParticipantStatus @default(SCREENING)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  enrollments    Enrollment[]
+
+  @@unique([studyId, subjectId])
+  @@index([studyId])
+  @@index([participantId])
+  @@index([status])
+  @@map("participants")
+}
+
+model Enrollment {
+  id            String   @id @default(cuid())
+  studyId       String
+  study         Study    @relation(fields: [studyId], references: [id])
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+  enrollmentDate DateTime @default(now())
+  enrolledById  String
+  enrolledBy    User     @relation("EnrolledBy", fields: [enrolledById], references: [id])
+  status        EnrollmentStatus @default(ACTIVE)
+  withdrawalDate DateTime?
+  withdrawalReason String?
+  completionDate DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([studyId, participantId])
+  @@index([studyId])
+  @@index([participantId])
+  @@index([status])
+  @@map("enrollments")
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  studyId      String
+  study        Study        @relation(fields: [studyId], references: [id])
+  name         String
+  type         DocumentType
+  version      String?
+  description  String?
+  filePath     String
+  fileSize     Int
+  mimeType     String
+  uploadedById String
+  uploadedBy   User         @relation("UploadedBy", fields: [uploadedById], references: [id])
+  status       DocumentStatus @default(ACTIVE)
+  approvalDate DateTime?
+  expirationDate DateTime?
+
+  // Aigents integration fields
+  aigentsChainName String?
+  aigentsRunId     String?
+  aigentsStatus    String?      // pending, processing, completed, failed
+  aigentsAnalysis  String?      // AI analysis result
+  aigentstartedAt DateTime?
+  aigentsCompletedAt DateTime?
+  aigentsError     String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  automationLogs AutomationLog[]
+
+  @@index([studyId])
+  @@index([aigentsRunId])
+  @@index([aigentsStatus])
+  @@map("documents")
+}
+
+// Automation/Webhook tracking
+model AutomationLog {
+  id              String    @id @default(cuid())
+  chainName       String    // "Protocol analyzer", "Consent Form Reviewer", etc.
+  chainRunId      String    @unique // THE KEY - links request to webhook response
+
+  // Relations
+  documentId      String?
+  document        Document? @relation(fields: [documentId], references: [id])
+  studyId         String?
+  requestedBy     String?   // User ID who triggered
+
+  // Request tracking
+  requestData     String?   // JSON string of what we sent
+  requestedAt     DateTime  @default(now())
+
+  // Response tracking
+  webhookPayload  String?   // JSON string of complete webhook received
+  agentResponse   String?   // Parsed response text
+  agentReceivedAt DateTime?
+
+  // Status
+  isCompleted     Boolean   @default(false)
+  status          String    @default("processing") // processing|completed|failed
+  errorMessage    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([chainRunId])
+  @@index([documentId])
+  @@index([studyId])
+  @@index([isCompleted])
+  @@index([status])
+  @@index([createdAt])
+  @@map("automation_logs")
+}
+
+// Enums
+enum StudyStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  ACTIVE
+  SUSPENDED
+  CLOSED
+  COMPLETED
+}
+
+enum StudyType {
+  INTERVENTIONAL
+  OBSERVATIONAL
+  REGISTRY
+  SURVEY
+  OTHER
+}
+
+enum RiskLevel {
+  MINIMAL
+  MODERATE
+  HIGH
+}
+
+enum ParticipantStatus {
+  SCREENING
+  ENROLLED
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  LOST_TO_FOLLOWUP
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  TERMINATED
+}
+
+enum DocumentType {
+  PROTOCOL
+  CONSENT_FORM
+  AMENDMENT
+  APPROVAL_LETTER
+  ADVERSE_EVENT
+  PROGRESS_REPORT
+  OTHER
+}
+
+enum DocumentStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  EXPIRED
+}

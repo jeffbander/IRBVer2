@@ -1,0 +1,283 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deployment:
+        description: 'Type "deploy-to-production" to confirm'
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: '18'
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_PRODUCTION }}
+  GCP_REGION: us-central1
+  CLOUD_RUN_SERVICE: irb-system-production
+  IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID_PRODUCTION }}/irb-system-production
+
+jobs:
+  validate-input:
+    name: Validate Deployment Confirmation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation input
+        run: |
+          if [ "${{ github.event.inputs.confirm_deployment }}" != "deploy-to-production" ]; then
+            echo "Deployment cancelled: confirmation input does not match"
+            exit 1
+          fi
+
+  run-full-test-suite:
+    name: Run Full Test Suite
+    runs-on: ubuntu-latest
+    needs: validate-input
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: npm run test:coverage
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations (test)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: file:./test.db
+
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          DATABASE_URL: file:./test.db
+          JWT_SECRET: test-secret-prod-validation
+          BASE_URL: http://localhost:3000
+          AIGENTS_WEBHOOK_SECRET: test-webhook
+          AIGENTS_FOLDER_ID: test-folder
+          USE_AIGENTS_MOCK: 'true'
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-production
+          path: |
+            playwright-report/
+            test-results/
+            artifacts/coverage/
+          retention-days: 30
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: run-full-test-suite
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRODUCTION }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.IMAGE_NAME }}:v${{ github.run_number }} \
+            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL_PRODUCTION }} \
+            .
+          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.IMAGE_NAME }}:v${{ github.run_number }}
+
+      - name: Setup Node.js for migrations
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+
+      - name: Deploy to Cloud Run (gradual rollout)
+        id: deploy
+        run: |
+          # Deploy new revision with 0% traffic
+          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+            --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --min-instances 1 \
+            --max-instances 100 \
+            --memory 1Gi \
+            --cpu 2 \
+            --timeout 300 \
+            --set-env-vars "NODE_ENV=production" \
+            --set-secrets "DATABASE_URL=DATABASE_URL_PRODUCTION:latest,\
+            JWT_SECRET=JWT_SECRET_PRODUCTION:latest,\
+            AIGENTS_API_URL=AIGENTS_API_URL:latest,\
+            AIGENTS_EMAIL=AIGENTS_EMAIL:latest,\
+            AIGENTS_WEBHOOK_SECRET=AIGENTS_WEBHOOK_SECRET_PRODUCTION:latest,\
+            AIGENTS_FOLDER_ID=AIGENTS_FOLDER_ID:latest" \
+            --revision-suffix prod-${{ github.sha }} \
+            --no-traffic \
+            --format=json | jq -r '.status.url' | tee deploy_url.txt
+
+          NEW_REVISION=$(gcloud run revisions list \
+            --service ${{ env.CLOUD_RUN_SERVICE }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --limit 1 \
+            --format="value(name)")
+
+          echo "new_revision=$NEW_REVISION" >> $GITHUB_OUTPUT
+          echo "url=$(cat deploy_url.txt)" >> $GITHUB_OUTPUT
+
+      - name: Test new revision
+        run: |
+          URL=${{ steps.deploy.outputs.url }}
+          REVISION=${{ steps.deploy.outputs.new_revision }}
+
+          # Test new revision specifically
+          for i in {1..30}; do
+            if curl -f -s -H "X-Revision: $REVISION" "$URL/api/health" > /dev/null; then
+              echo "New revision is healthy"
+              break
+            fi
+            echo "Waiting for new revision to be ready... ($i/30)"
+            sleep 10
+          done
+
+      - name: Gradual traffic migration
+        run: |
+          REVISION=${{ steps.deploy.outputs.new_revision }}
+
+          # Migrate traffic gradually: 10% -> 50% -> 100%
+          echo "Migrating 10% traffic to new revision..."
+          gcloud run services update-traffic ${{ env.CLOUD_RUN_SERVICE }} \
+            --to-revisions $REVISION=10 \
+            --platform managed \
+            --region ${{ env.GCP_REGION }}
+
+          sleep 60
+
+          echo "Migrating 50% traffic to new revision..."
+          gcloud run services update-traffic ${{ env.CLOUD_RUN_SERVICE }} \
+            --to-revisions $REVISION=50 \
+            --platform managed \
+            --region ${{ env.GCP_REGION }}
+
+          sleep 120
+
+          echo "Migrating 100% traffic to new revision..."
+          gcloud run services update-traffic ${{ env.CLOUD_RUN_SERVICE }} \
+            --to-revisions $REVISION=100 \
+            --platform managed \
+            --region ${{ env.GCP_REGION }}
+
+      - name: Verify deployment
+        run: |
+          URL=${{ steps.deploy.outputs.url }}
+
+          # Run multiple health checks
+          for i in {1..10}; do
+            if ! curl -f "$URL/api/health" > /dev/null; then
+              echo "Health check failed on attempt $i"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "All health checks passed"
+
+      - name: Tag successful deployment
+        if: success()
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "production-${{ github.run_number }}" -m "Production deployment ${{ github.run_number }}"
+          git push origin "production-${{ github.run_number }}"
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Production deployment successful!"
+          echo "URL: ${{ steps.deploy.outputs.url }}"
+          echo "Revision: ${{ steps.deploy.outputs.new_revision }}"
+          echo "Image: ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, initiating rollback..."
+
+          PREVIOUS_REVISION=$(gcloud run revisions list \
+            --service ${{ env.CLOUD_RUN_SERVICE }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --filter="status.conditions.status:True" \
+            --limit 2 \
+            --format="value(name)" | tail -n 1)
+
+          if [ ! -z "$PREVIOUS_REVISION" ]; then
+            gcloud run services update-traffic ${{ env.CLOUD_RUN_SERVICE }} \
+              --to-revisions $PREVIOUS_REVISION=100 \
+              --platform managed \
+              --region ${{ env.GCP_REGION }}
+            echo "Rolled back to revision: $PREVIOUS_REVISION"
+          else
+            echo "No previous revision found for rollback"
+            exit 1
+          fi
+
+  post-deployment-tests:
+    name: Post-Deployment Tests
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    steps:
+      - name: Run production smoke tests
+        run: |
+          # Add your production URL
+          PROD_URL="${{ secrets.PRODUCTION_URL }}"
+
+          # Health check
+          curl -f "$PROD_URL/api/health" || exit 1
+
+          echo "Production smoke tests passed"

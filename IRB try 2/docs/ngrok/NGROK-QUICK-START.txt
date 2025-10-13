@@ -1,0 +1,79 @@
+================================================================================
+                    NGROK TUNNEL - QUICK START GUIDE
+                    IRB Management System on Port 3009
+================================================================================
+
+CURRENT TUNNEL STATUS: ACTIVE
+────────────────────────────────────────────────────────────────────────────
+
+Public URL:    https://c8eed062f881.ngrok.app
+Local Port:    3009
+Protocol:      HTTPS
+Dashboard:     http://localhost:4040
+
+================================================================================
+                        AIGENTS WEBHOOK CONFIGURATION
+================================================================================
+
+Copy this URL to your Aigents webhook settings:
+
+    https://c8eed062f881.ngrok.app/api/aigents/webhook
+
+================================================================================
+                            QUICK COMMANDS
+================================================================================
+
+START TUNNEL          →  start-ngrok.bat
+STOP TUNNEL           →  stop-ngrok.bat
+GET CURRENT URL       →  get-tunnel-url.bat
+VIEW TRAFFIC          →  Open http://localhost:4040 in browser
+
+================================================================================
+                          IMPORTANT NOTICE
+================================================================================
+
+⚠️  FREE TIER WARNING:
+    Your tunnel URL will CHANGE every time ngrok restarts!
+
+    When this happens:
+    1. Run: get-tunnel-url.bat
+    2. Copy the new URL
+    3. Update Aigents webhook configuration
+    4. Update .env file with new BASE_URL
+
+💡  UPGRADE RECOMMENDED:
+    Ngrok Personal ($10/month) gives you a PERMANENT URL that never changes.
+    Visit: https://dashboard.ngrok.com/billing/subscription
+
+================================================================================
+                           NEXT STEPS
+================================================================================
+
+1. Your Next.js app should be running on port 3009
+   → npm run dev
+
+2. Configure Aigents webhook with the URL above
+
+3. Test the webhook:
+   → Visit http://localhost:4040 to see incoming requests
+
+4. Monitor traffic in the ngrok dashboard
+
+================================================================================
+                        FILES CREATED
+================================================================================
+
+ngrok-config.yml        - Ngrok configuration file
+start-ngrok.bat         - Start tunnel script
+stop-ngrok.bat          - Stop tunnel script
+get-tunnel-url.bat      - Get current URL script
+NGROK-SETUP.md          - Detailed documentation
+WEBHOOK-CONFIG.md       - Webhook configuration guide
+NGROK-QUICK-START.txt   - This file
+
+================================================================================
+
+Questions? Check NGROK-SETUP.md for detailed documentation.
+
+Last Updated: 2025-10-12
+Current Tunnel: https://c8eed062f881.ngrok.app

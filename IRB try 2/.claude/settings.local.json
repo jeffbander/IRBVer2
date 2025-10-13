@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(npm search:*)",
+      "Bash(npx playwright-mcp:*)",
+      "Bash(claude --version)",
+      "Bash(npm update:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(curl:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(npx prisma studio:*)",
+      "Bash(npx playwright:*)",
+      "Bash(dir \"C:\\Users\\jeffr\\IRB try 2\\demo-screenshots\")",
+      "Bash(dir:*)",
+      "Bash(npx prisma migrate dev:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 .claude/scripts/context-monitor.py"
+  }
+}

@@ -1,0 +1,42 @@
+# ===============================================================================
+# Terraform Variables - Example Configuration
+# ===============================================================================
+# Copy this file to terraform.tfvars and update with your values
+# For multiple environments, create:
+#   - terraform.staging.tfvars
+#   - terraform.production.tfvars
+# ===============================================================================
+
+# GCP Project Configuration
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+
+# Environment (staging or production)
+environment = "staging"
+
+# Cloud SQL Configuration
+# Staging: db-f1-micro (shared CPU, 0.6GB RAM) - ~$7/month
+# Production: db-n1-standard-1 (1 CPU, 3.75GB RAM) - ~$50/month
+db_instance_tier = "db-f1-micro"
+
+# Database disk size in GB
+db_disk_size = 10
+
+# Enable automated backups
+db_backup_enabled = true
+
+# Cloud Run Configuration
+# Staging: min 0, max 10
+# Production: min 1, max 100
+cloud_run_min_instances = 0
+cloud_run_max_instances = 10
+
+# Cloud Run resources
+# Staging: 512Mi memory, 1 CPU
+# Production: 1Gi memory, 2 CPU
+cloud_run_memory = "512Mi"
+cloud_run_cpu    = "1"
+
+# Optional: Custom domain name
+# domain_name = "irb.yourdomain.com"
+domain_name = ""
