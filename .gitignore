@@ -1,14 +1,23 @@
 # Ignore everything by default
 *
 
-# But track these project directories
+# But track these project directories and their contents
 !/.gitignore
 !/IRB try 2/
+!/IRB try 2/**
 !/SINAIAPPRESEARCH/
+!/SINAIAPPRESEARCH/**
 
 # Ignore common files everywhere
 **/.DS_Store
 **/Thumbs.db
 **/desktop.ini
 **/*.tmp
-**/*.log
+
+# Ignore node_modules everywhere
+**/node_modules/
+
+# Ignore build artifacts
+**/.next/
+**/dist/
+**/build/

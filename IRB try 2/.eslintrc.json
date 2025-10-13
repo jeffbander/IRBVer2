@@ -1,0 +1,29 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "window",
+        "property": "localStorage",
+        "message": "Use in-memory state via service interface (see ADR-0003)"
+      },
+      {
+        "object": "window",
+        "property": "sessionStorage",
+        "message": "Use in-memory state via service interface (see ADR-0003)"
+      }
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "MemberExpression[object.name='localStorage']",
+        "message": "localStorage is forbidden - use in-memory state management"
+      },
+      {
+        "selector": "MemberExpression[object.name='sessionStorage']",
+        "message": "sessionStorage is forbidden - use in-memory state management"
+      }
+    ]
+  }
+}
