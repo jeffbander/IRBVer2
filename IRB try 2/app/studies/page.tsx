@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/state';
+import { Button, StatusBadge } from '@/components/ui';
 
 interface Study {
   id: string;
@@ -89,33 +90,28 @@ export default function StudiesPage() {
   }, [searchTerm, studies]);
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      DRAFT: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
-      PENDING_REVIEW: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending Review' },
-      APPROVED: { color: 'bg-green-100 text-green-800', label: 'Approved' },
-      ACTIVE: { color: 'bg-blue-100 text-blue-800', label: 'Active' },
-      SUSPENDED: { color: 'bg-red-100 text-red-800', label: 'Suspended' },
-      CLOSED: { color: 'bg-gray-100 text-gray-600', label: 'Closed' },
-      COMPLETED: { color: 'bg-purple-100 text-purple-800', label: 'Completed' },
+    const statusMap: Record<string, 'draft' | 'pending' | 'approved' | 'active' | 'rejected'> = {
+      DRAFT: 'draft',
+      PENDING_REVIEW: 'pending',
+      APPROVED: 'approved',
+      ACTIVE: 'active',
+      SUSPENDED: 'rejected',
+      CLOSED: 'draft',
+      COMPLETED: 'approved',
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.DRAFT;
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
-      </span>
-    );
+    return <StatusBadge status={statusMap[status] || 'draft'} />;
   };
 
   const getRiskBadge = (risk: string) => {
     const riskConfig = {
-      MINIMAL: 'bg-green-50 text-green-700',
-      MODERATE: 'bg-yellow-50 text-yellow-700',
-      HIGH: 'bg-red-50 text-red-700',
+      MINIMAL: 'bg-status-success/10 text-status-success border border-status-success/20',
+      MODERATE: 'bg-status-warning/10 text-status-warning border border-status-warning/20',
+      HIGH: 'bg-status-error/10 text-status-error border border-status-error/20',
     };
 
     return (
-      <span className={`px-2 py-1 rounded text-xs ${riskConfig[risk as keyof typeof riskConfig]}`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${riskConfig[risk as keyof typeof riskConfig]}`}>
         {risk}
       </span>
     );
@@ -150,7 +146,7 @@ export default function StudiesPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#003F6C] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading studies...</p>
         </div>
       </div>
@@ -163,27 +159,28 @@ export default function StudiesPage() {
         {/* Header */}
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <button
+            <Button
               onClick={() => router.push('/dashboard')}
-              className="text-gray-600 hover:text-gray-900 mb-4 flex items-center"
+              variant="tertiary"
+              className="mb-4 px-0 hover:bg-transparent"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               Back to Dashboard
-            </button>
-            <h1 className="text-3xl font-bold text-gray-900">Research Studies</h1>
-            <p className="text-gray-600 mt-2">Manage and review research protocols</p>
+            </Button>
+            <h1 className="text-h1 text-brand-heading">Research Studies</h1>
+            <p className="text-body-large text-gray-600 mt-2">Manage and review research protocols</p>
           </div>
-          <button
+          <Button
             onClick={() => router.push('/studies/new')}
-            className="bg-[#003F6C] text-white px-6 py-3 rounded-lg hover:bg-[#002D4F] transition-all flex items-center"
+            variant="primary"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             New Study
-          </button>
+          </Button>
         </div>
 
         {/* Tabs */}
@@ -191,25 +188,25 @@ export default function StudiesPage() {
           <div className="flex space-x-4 mb-6">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                 activeTab === 'all'
-                  ? 'bg-white shadow-md text-[#003F6C]'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white shadow-md text-brand-primary border-2 border-brand-primary'
+                  : 'text-gray-600 hover:text-brand-heading bg-white border-2 border-transparent hover:border-gray-200'
               }`}
             >
               All Studies ({studies.length})
             </button>
             <button
               onClick={() => setActiveTab('review')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center ${
+              className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center ${
                 activeTab === 'review'
-                  ? 'bg-white shadow-md text-[#003F6C]'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white shadow-md text-brand-accent border-2 border-brand-accent'
+                  : 'text-gray-600 hover:text-brand-heading bg-white border-2 border-transparent hover:border-gray-200'
               }`}
             >
               Review Queue
               {studies.filter(s => s.status === 'PENDING_REVIEW').length > 0 && (
-                <span className="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">
+                <span className="ml-2 bg-brand-accent text-white px-2.5 py-0.5 rounded-full text-xs font-bold">
                   {studies.filter(s => s.status === 'PENDING_REVIEW').length}
                 </span>
               )}
@@ -240,7 +237,7 @@ export default function StudiesPage() {
                   placeholder="Search by title, protocol number, or PI name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
                 />
               </div>
             </div>
@@ -248,7 +245,7 @@ export default function StudiesPage() {
             <select
               value={filter.status}
               onChange={(e) => setFilter({ ...filter, status: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
             >
               <option value="">All Statuses</option>
               <option value="DRAFT">Draft</option>
@@ -261,7 +258,7 @@ export default function StudiesPage() {
             <select
               value={filter.type}
               onChange={(e) => setFilter({ ...filter, type: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
             >
               <option value="">All Types</option>
               <option value="INTERVENTIONAL">Interventional</option>
@@ -272,15 +269,15 @@ export default function StudiesPage() {
             </select>
           </div>
           <div className="flex justify-end">
-            <button
+            <Button
               onClick={handleExport}
-              className="flex items-center px-4 py-2 text-[#003F6C] bg-white border border-[#003F6C] rounded-lg hover:bg-[#003F6C] hover:text-white transition-all"
+              variant="secondary"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Export to CSV
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -342,9 +339,9 @@ export default function StudiesPage() {
                   <td className="px-6 py-4">
                     <button
                       onClick={() => router.push(`/studies/${study.id}`)}
-                      className="text-[#003F6C] hover:text-[#002D4F] font-medium text-sm"
+                      className="text-brand-primary hover:text-brand-primary-hover font-semibold text-sm transition-colors"
                     >
-                      View Details
+                      View Details →
                     </button>
                   </td>
                 </tr>
@@ -358,13 +355,14 @@ export default function StudiesPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p className="mt-2 text-gray-600">No studies found</p>
-              <button
+              <p className="mt-2 text-gray-600 text-lg">No studies found</p>
+              <Button
                 onClick={() => router.push('/studies/new')}
-                className="mt-4 text-[#003F6C] font-medium hover:underline"
+                variant="primary"
+                className="mt-4"
               >
                 Create your first study
-              </button>
+              </Button>
             </div>
           )}
         </div>
