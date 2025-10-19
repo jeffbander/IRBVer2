@@ -85,7 +85,10 @@ export async function POST(
           // For mock/test documents, use placeholder content
           documentContent = `Mock ${document.type} Document - ${document.name}\n\nThis is a test document for demonstration purposes.\n\nStudy: ${document.study.title}\nDocument Type: ${document.type}`;
         } else {
-          const filePath = path.join(process.cwd(), document.filePath);
+          // Check if filePath is already absolute
+          const filePath = path.isAbsolute(document.filePath)
+            ? document.filePath
+            : path.join(process.cwd(), document.filePath);
           const fileBuffer = await fs.readFile(filePath);
           if (document.mimeType.includes('text') || document.mimeType.includes('json')) {
             documentContent = fileBuffer.toString('utf-8');
@@ -182,7 +185,7 @@ export async function POST(
         action: 'AIGENTS_ANALYSIS_TRIGGERED',
         entity: 'Document',
         entityId: params.documentId,
-        details: {
+        metadata: {
           chainName,
           chainRunId,
           documentName: document.name,
