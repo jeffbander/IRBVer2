@@ -36,6 +36,8 @@ export async function logStudyAction(params: LogStudyActionParams): Promise<void
       metadata,
     } = params;
 
+    console.log('🔍 Attempting to log study action:', { userId, action, studyId, studyTitle });
+
     // Calculate changes if not provided
     let calculatedChanges = changes;
     if (!calculatedChanges && oldValues && newValues) {
@@ -50,7 +52,7 @@ export async function logStudyAction(params: LogStudyActionParams): Promise<void
       }
     }
 
-    await prisma.auditLog.create({
+    const result = await prisma.auditLog.create({
       data: {
         userId,
         action,
@@ -65,8 +67,11 @@ export async function logStudyAction(params: LogStudyActionParams): Promise<void
         metadata: metadata || null,
       },
     });
+
+    console.log('✅ Audit log created successfully:', result.id);
   } catch (error) {
-    console.error('Error logging study action:', error);
+    console.error('❌ Error logging study action:', error);
+    console.error('Failed params:', JSON.stringify(params, null, 2));
     // Don't throw - audit logging should not break the main flow
   }
 }
