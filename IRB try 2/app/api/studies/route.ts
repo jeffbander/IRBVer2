@@ -7,6 +7,7 @@ import { cache, cacheKeys, invalidateCache } from '@/lib/cache';
 import { sanitizeObject, sanitizeProtocolNumber, sanitizeString } from '@/lib/sanitize';
 import { rateLimiters } from '@/lib/rate-limit';
 import { cors, handlePreflight } from '@/lib/cors';
+import { logStudyAction, getClientIp, getUserAgent } from '@/lib/audit';
 
 export async function OPTIONS(request: NextRequest) {
   return handlePreflight(request);
@@ -50,6 +51,16 @@ export async function GET(request: NextRequest) {
             { reviewerId: user.userId },
             { status: 'PENDING_REVIEW' }
           ];
+        } else if (user.role.name === 'coordinator') {
+          // Coordinators only see assigned studies
+          const assignments = await prisma.studyCoordinator.findMany({
+            where: {
+              coordinatorId: user.userId,
+              active: true,
+            },
+            select: { studyId: true },
+          });
+          where.id = { in: assignments.map((a) => a.studyId) };
         }
 
         if (status) where.status = status;
@@ -136,14 +147,20 @@ export async function POST(request: NextRequest) {
     });
 
     // Log audit event
-    await prisma.auditLog.create({
-      data: {
-        userId: user.userId,
-        action: 'CREATE_STUDY',
-        entity: 'Study',
-        entityId: study.id,
-        details: { title: study.title, protocolNumber: study.protocolNumber }
-      }
+    await logStudyAction({
+      userId: user.userId,
+      action: 'CREATE',
+      studyId: study.id,
+      studyTitle: study.title,
+      newValues: {
+        title: study.title,
+        protocolNumber: study.protocolNumber,
+        type: study.type,
+        riskLevel: study.riskLevel,
+        status: study.status,
+      },
+      ipAddress: getClientIp(request.headers),
+      userAgent: getUserAgent(request.headers),
     });
 
     // Invalidate cache

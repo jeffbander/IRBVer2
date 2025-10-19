@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/lib/state/auth';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/state';
 
 interface AuditLog {
   id: string;
@@ -10,8 +10,12 @@ interface AuditLog {
   action: string;
   entity: string;
   entityId: string;
-  details: any;
+  entityName: string | null;
+  oldValues: any;
+  newValues: any;
+  changes: any;
   ipAddress: string | null;
+  userAgent: string | null;
   createdAt: string;
   user: {
     id: string;
@@ -23,14 +27,15 @@ interface AuditLog {
 }
 
 export default function AuditLogsPage() {
-  const { user, token } = useAuthStore();
   const router = useRouter();
+  const { token, user } = useAuthStore();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({
     userId: '',
     entity: '',
+    entityId: '',
     action: '',
     startDate: '',
     endDate: '',
@@ -38,16 +43,18 @@ export default function AuditLogsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Check admin permission
+  // Redirect if not authenticated
   useEffect(() => {
-    if (!user || !user.role.permissions.includes('view_audit_logs')) {
-      router.push('/dashboard');
+    if (!token || !user) {
+      router.push('/login');
     }
-  }, [user, router]);
+  }, [token, user, router]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [page, filters]);
+    if (token && user) {
+      fetchLogs();
+    }
+  }, [page, filters, token, user]);
 
   const fetchLogs = async () => {
     if (!token) return;
@@ -66,14 +73,25 @@ export default function AuditLogsPage() {
       });
 
       const response = await fetch(`/api/audit-logs?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      if (!response.ok) throw new Error('Failed to fetch audit logs');
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/login');
+          return;
+        }
+        if (response.status === 403) {
+          throw new Error('You do not have permission to view audit logs');
+        }
+        throw new Error('Failed to fetch audit logs');
+      }
 
       const data = await response.json();
       setLogs(data.logs);
-      setTotalPages(data.pagination.totalPages);
+      setTotalPages(data.pagination.pages);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -228,8 +246,30 @@ export default function AuditLogsPage() {
                           <div className="text-gray-500 text-xs">{log.entityId.substring(0, 8)}...</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                        {log.details ? JSON.stringify(log.details) : '-'}
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="max-w-xs">
+                          {log.entityName && (
+                            <div className="font-medium text-gray-900 mb-1">{log.entityName}</div>
+                          )}
+                          {log.changes && Object.keys(log.changes).length > 0 && (
+                            <div className="text-xs space-y-1">
+                              {Object.entries(log.changes).slice(0, 3).map(([key, change]: [string, any]) => (
+                                <div key={key} className="text-gray-600">
+                                  <span className="font-semibold">{key}:</span>{' '}
+                                  <span className="text-red-600">{JSON.stringify(change.old)}</span>
+                                  {' → '}
+                                  <span className="text-green-600">{JSON.stringify(change.new)}</span>
+                                </div>
+                              ))}
+                              {Object.keys(log.changes).length > 3 && (
+                                <div className="text-gray-400">
+                                  +{Object.keys(log.changes).length - 3} more changes
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {!log.changes && !log.entityName && '-'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {log.ipAddress || '-'}

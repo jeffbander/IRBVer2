@@ -20,12 +20,14 @@ model User {
   role      Role     @relation(fields: [roleId], references: [id])
   roleId    String
   active    Boolean  @default(true)
+  approved  Boolean  @default(false) // Admin approval required
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   studiesAsPI        Study[]       @relation("PrincipalInvestigator")
   studiesAsReviewer  Study[]       @relation("Reviewer")
+  studyCoordinators  StudyCoordinator[]
   enrollments        Enrollment[]  @relation("EnrolledBy")
   documents          Document[]    @relation("UploadedBy")
   auditLogs          AuditLog[]
@@ -33,6 +35,7 @@ model User {
   @@index([email])
   @@index([roleId])
   @@index([active])
+  @@index([approved])
 }
 
 model Role {
@@ -46,19 +49,25 @@ model Role {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String
-  details   Json?
-  ipAddress String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String   // CREATE, UPDATE, DELETE, APPROVE, etc.
+  entity     String   // Study, Participant, Document, User, etc.
+  entityId   String
+  entityName String?  // Human-readable entity name
+  oldValues  Json?    // Previous state
+  newValues  Json?    // New state
+  changes    Json?    // Specific fields changed
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?    // Additional context
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([entity, entityId])
   @@index([createdAt])
+  @@index([action])
 }
 
 // Existing models with updates
@@ -86,6 +95,8 @@ model Study {
   participants      Participant[]
   enrollments       Enrollment[]
   documents         Document[]
+  studyCoordinators StudyCoordinator[]
+  studyVisits       StudyVisit[]
 
   @@index([status])
   @@index([type])
@@ -115,7 +126,8 @@ model Participant {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  enrollments    Enrollment[]
+  enrollments       Enrollment[]
+  participantVisits ParticipantVisit[]
 
   @@unique([studyId, subjectId])
 }
@@ -285,4 +297,67 @@ enum DocumentStatus {
   ACTIVE
   SUPERSEDED
   EXPIRED
+}
+
+// Coordinator-Study Assignment (Many-to-Many)
+model StudyCoordinator {
+  id            String   @id @default(cuid())
+  studyId       String
+  study         Study    @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  coordinatorId String
+  coordinator   User     @relation(fields: [coordinatorId], references: [id], onDelete: Cascade)
+  assignedAt    DateTime @default(now())
+  assignedBy    String   // User ID who made the assignment
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([studyId, coordinatorId])
+  @@index([studyId])
+  @@index([coordinatorId])
+  @@index([active])
+}
+
+// Future: Visit Schedule Management
+model StudyVisit {
+  id              String   @id @default(cuid())
+  studyId         String
+  study           Study    @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  visitNumber     Int
+  visitName       String
+  visitType       String   // Screening, Baseline, Follow-up, etc.
+  windowDays      Int?     // Visit window (+/- days)
+  description     String?
+  expectedPayment Float?   // Payment for this visit
+  procedures      String?  // JSON string of procedures/tests
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  participantVisits ParticipantVisit[]
+
+  @@index([studyId])
+  @@index([visitNumber])
+}
+
+// Future: Track actual participant visits
+model ParticipantVisit {
+  id             String    @id @default(cuid())
+  participantId  String
+  participant    Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  studyVisitId   String
+  studyVisit     StudyVisit @relation(fields: [studyVisitId], references: [id], onDelete: Cascade)
+  scheduledDate  DateTime?
+  completedDate  DateTime?
+  status         String    @default("scheduled") // scheduled, completed, missed, cancelled
+  notes          String?
+  paymentIssued  Boolean   @default(false)
+  paymentAmount  Float?
+  clinicalData   String?   // JSON string for visit-specific clinical data
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([participantId])
+  @@index([studyVisitId])
+  @@index([status])
+  @@index([scheduledDate])
 }

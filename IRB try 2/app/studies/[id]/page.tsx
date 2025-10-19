@@ -269,6 +269,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
       REJECT_STUDY: 'Rejected',
       REQUEST_CHANGES: 'Changes Requested',
       ACTIVATE_STUDY: 'Activated',
+      INACTIVATE_STUDY: 'Returned to Review',
     };
     return labels[action] || action;
   };
@@ -380,6 +381,18 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Activate Study
+                </button>
+              )}
+
+              {(study.status === 'ACTIVE' || study.status === 'APPROVED') && (canApprove || isAdmin) && (
+                <button
+                  onClick={() => {
+                    setReviewAction('inactivate');
+                    setShowReviewModal(true);
+                  }}
+                  className="px-4 py-2 border border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50"
+                >
+                  Return to Review
                 </button>
               )}
             </div>
@@ -685,6 +698,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
               {reviewAction === 'reject' && 'Reject Study'}
               {reviewAction === 'request_changes' && 'Request Changes'}
               {reviewAction === 'activate' && 'Activate Study'}
+              {reviewAction === 'inactivate' && 'Return Study to Review'}
             </h3>
 
             <textarea

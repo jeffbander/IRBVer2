@@ -55,16 +55,20 @@ export async function PUT(
     }
 
     const data = await request.json();
-    const { firstName, lastName, roleId, active } = data;
+    const { email, firstName, lastName, roleId, active, approved } = data;
+
+    // Build update data object with only provided fields
+    const updateData: any = {};
+    if (email !== undefined) updateData.email = email;
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (roleId !== undefined) updateData.roleId = roleId;
+    if (active !== undefined) updateData.active = active;
+    if (approved !== undefined) updateData.approved = approved;
 
     const updatedUser = await prisma.user.update({
       where: { id: params.id },
-      data: {
-        firstName,
-        lastName,
-        roleId,
-        active,
-      },
+      data: updateData,
       include: {
         role: true,
       },
@@ -80,12 +84,7 @@ export async function PUT(
         action: 'UPDATE_USER',
         entity: 'User',
         entityId: params.id,
-        details: {
-          firstName,
-          lastName,
-          roleId,
-          active,
-        },
+        details: updateData,
       },
     });
 

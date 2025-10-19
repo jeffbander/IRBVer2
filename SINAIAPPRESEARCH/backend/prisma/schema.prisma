@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StudyRiskLevel {
+  MINIMAL
+  MORE_THAN_MINIMAL
+}
+
+enum StudyStatus {
+  DRAFT
+  READY_TO_SUBMIT
+  SUBMITTED_TO_IRB
+  ACTIVE
+  CLOSED
+}
+
+enum DocumentKind {
+  PROTOCOL
+  BUDGET
+  CONSENT
+  IRB_LETTER
+  OTHER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
+
+enum IRBPath {
+  UNSET
+  EXEMPT
+  EXPEDITED
+  CONVENED
+}
+
+enum IRBStatus {
+  DRAFT
+  READY_TO_SUBMIT
+  SUBMITTED
+  PRE_REVIEW
+  MODIFICATIONS_REQUESTED
+  RESUBMITTED
+  EXEMPT_DETERMINATION
+  EXPEDITED_APPROVED
+  MEETING_SCHEDULED
+  APPROVED
+  CONDITIONALLY_APPROVED
+  DEFERRED
+  NOT_APPROVED
+}
+
+model StudyType {
+  id                    String        @id
+  name                  String
+  description           String?
+  regulatedFields       Json?
+  defaultTaskTemplateId String?
+  defaultTaskTemplate   TaskTemplate? @relation("StudyTypeTaskTemplate", fields: [defaultTaskTemplateId], references: [id])
+  studies               Study[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model Role {
+  id          String            @id
+  name        String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  persons     PersonRole[]
+  assignments StudyAssignment[]
+  tasks       Task[]
+}
+
+model Person {
+  id            String             @id
+  name          String
+  email         String             @unique
+  orcidId       String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  studies       Study[]            @relation("PI")
+  assignments   StudyAssignment[]
+  roles         PersonRole[]
+  tasks         Task[]             @relation("TaskOwner")
+  auditEvents   AuditEvent[]       @relation("AuditActor")
+  irbStatusLogs IRBStatusHistory[] @relation("IRBActor")
+  Document      Document[]
+  BudgetLine    BudgetLine[]
+}
+
+model PersonRole {
+  personId   String
+  roleId     String
+  assignedAt DateTime @default(now())
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([personId, roleId])
+}
+
+model Study {
+  id                    String            @id @default(uuid())
+  title                 String
+  shortTitle            String?
+  typeId                String
+  riskLevel             StudyRiskLevel
+  status                StudyStatus       @default(DRAFT)
+  piId                  String
+  sponsorName           String?
+  isMultiSite           Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  deletedAt             DateTime?
+  type                  StudyType         @relation(fields: [typeId], references: [id])
+  principalInvestigator Person            @relation("PI", fields: [piId], references: [id])
+  documents             Document[]
+  assignments           StudyAssignment[]
+  tasks                 Task[]
+  budget                Budget?
+  irbSubmission         IRBSubmission?
+  sites                 StudySite[]
+}
+
+model StudySite {
+  id         String   @id @default(uuid())
+  studyId    String
+  name       String
+  isInternal Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  study      Study    @relation(fields: [studyId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id              String       @id @default(uuid())
+  studyId         String
+  kind            DocumentKind
+  fileName        String
+  objectKey       String
+  storageProvider String       @default("s3")
+  version         Int          @default(1)
+  hash            String
+  uploadedBy      String
+  uploadedAt      DateTime     @default(now())
+  notes           String?
+  study           Study        @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  uploader        Person       @relation(fields: [uploadedBy], references: [id])
+}
+
+model StudyAssignment {
+  id            String    @id @default(uuid())
+  studyId       String
+  personId      String
+  roleId        String
+  effortPercent Decimal?  @db.Decimal(5, 2)
+  hoursPerWeek  Decimal?  @db.Decimal(5, 2)
+  startDate     DateTime
+  endDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  study         Study     @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  person        Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  role          Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  studyId     String
+  title       String
+  description String?
+  ownerId     String?
+  roleId      String?
+  status      TaskStatus @default(PENDING)
+  dueAt       DateTime?
+  position    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  study       Study      @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  owner       Person?    @relation("TaskOwner", fields: [ownerId], references: [id])
+  role        Role?      @relation(fields: [roleId], references: [id])
+}
+
+model Budget {
+  id            String       @id @default(uuid())
+  studyId       String       @unique
+  currency      String       @default("USD")
+  totalDirect   Decimal?     @db.Decimal(12, 2)
+  totalIndirect Decimal?     @db.Decimal(12, 2)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  study         Study        @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  lines         BudgetLine[]
+}
+
+model BudgetLine {
+  id        String   @id @default(uuid())
+  budgetId  String
+  category  String
+  amount    Decimal  @db.Decimal(12, 2)
+  personId  String?
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  budget    Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  person    Person?  @relation(fields: [personId], references: [id])
+}
+
+model IRBSubmission {
+  id                       String             @id @default(uuid())
+  studyId                  String             @unique
+  path                     IRBPath            @default(UNSET)
+  currentStatus            IRBStatus          @default(DRAFT)
+  expeditedCategory        String?
+  submittedAt              DateTime?
+  meetingDate              DateTime?
+  determinedAt             DateTime?
+  continuingReviewRequired Boolean            @default(false)
+  currentPacketVersion     Int                @default(0)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  study                    Study              @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  statusHistory            IRBStatusHistory[]
+}
+
+model IRBStatusHistory {
+  id              String        @id @default(uuid())
+  irbSubmissionId String
+  fromStatus      IRBStatus?
+  toStatus        IRBStatus
+  note            String?
+  actorId         String?
+  createdAt       DateTime      @default(now())
+  submission      IRBSubmission @relation(fields: [irbSubmissionId], references: [id], onDelete: Cascade)
+  actor           Person?       @relation("IRBActor", fields: [actorId], references: [id])
+}
+
+model TaskTemplate {
+  id         String      @id
+  name       String
+  tasks      Json
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  studyTypes StudyType[] @relation("StudyTypeTaskTemplate")
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  entityType String
+  entityId   String
+  action     String
+  actorId    String?
+  ipAddress  String?
+  userAgent  String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+  actor      Person?  @relation("AuditActor", fields: [actorId], references: [id])
+}

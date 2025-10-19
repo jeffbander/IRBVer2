@@ -60,7 +60,7 @@ export async function authenticateUser(email: string, password: string) {
     include: { role: true },
   });
 
-  if (!user || !user.active) {
+  if (!user || !user.active || !user.approved) {
     return null;
   }
 

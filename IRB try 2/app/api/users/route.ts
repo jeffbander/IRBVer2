@@ -24,8 +24,11 @@ export async function GET(request: NextRequest) {
         email: true,
         firstName: true,
         lastName: true,
+        active: true,
+        approved: true,
         role: {
           select: {
+            id: true,
             name: true,
             permissions: true
           }

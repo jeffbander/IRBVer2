@@ -9,7 +9,10 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  active: boolean;
+  approved: boolean;
   role: {
+    id: string;
     name: string;
     permissions: string[];
   };
@@ -161,6 +164,9 @@ export default function UsersPage() {
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -181,6 +187,20 @@ export default function UsersPage() {
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
                       {user.role.name}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium inline-block text-center ${
+                        user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.active ? 'Active' : 'Inactive'}
+                      </span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium inline-block text-center ${
+                        user.approved ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {user.approved ? 'Approved' : 'Pending'}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {new Date(user.createdAt).toLocaleDateString()}

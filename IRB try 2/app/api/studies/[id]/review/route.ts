@@ -165,13 +165,26 @@ export async function POST(
         return NextResponse.json({ message: 'Changes requested', comments });
 
       case 'activate':
-        // Activate an approved study
+        // Activate an approved study - allowed for reviewers and admins
         if (study.status !== 'APPROVED') {
           return NextResponse.json({ error: 'Only approved studies can be activated' }, { status: 400 });
         }
 
-        if (study.principalInvestigatorId !== user.userId && !user.role.permissions.includes('edit_all_studies')) {
-          return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+        // Allow reviewers (with approve_studies permission) and admins to activate
+        let activatePermissions = user.role.permissions;
+        if (typeof activatePermissions === 'string') {
+          try {
+            activatePermissions = JSON.parse(activatePermissions);
+          } catch {
+            activatePermissions = [];
+          }
+        }
+
+        const canActivate = Array.isArray(activatePermissions) &&
+          (activatePermissions.includes('approve_studies') || activatePermissions.includes('edit_all_studies'));
+
+        if (!canActivate) {
+          return NextResponse.json({ error: 'Insufficient permissions - only reviewers and admins can activate studies' }, { status: 403 });
         }
 
         await prisma.study.update({
@@ -190,6 +203,48 @@ export async function POST(
         });
 
         return NextResponse.json({ message: 'Study activated' });
+
+      case 'inactivate':
+        // Inactivate a study and return it to review status - allowed for reviewers and admins
+        if (!['ACTIVE', 'APPROVED'].includes(study.status)) {
+          return NextResponse.json({ error: 'Only active or approved studies can be inactivated' }, { status: 400 });
+        }
+
+        // Allow reviewers (with approve_studies permission) and admins to inactivate
+        let inactivatePermissions = user.role.permissions;
+        if (typeof inactivatePermissions === 'string') {
+          try {
+            inactivatePermissions = JSON.parse(inactivatePermissions);
+          } catch {
+            inactivatePermissions = [];
+          }
+        }
+
+        const canInactivate = Array.isArray(inactivatePermissions) &&
+          (inactivatePermissions.includes('approve_studies') || inactivatePermissions.includes('edit_all_studies'));
+
+        if (!canInactivate) {
+          return NextResponse.json({ error: 'Insufficient permissions - only reviewers and admins can inactivate studies' }, { status: 403 });
+        }
+
+        await prisma.study.update({
+          where: { id: params.id },
+          data: { status: 'PENDING_REVIEW' }
+        });
+
+        await prisma.auditLog.create({
+          data: {
+            userId: user.userId,
+            action: 'INACTIVATE_STUDY',
+            entity: 'Study',
+            entityId: params.id,
+            details: { comments, reason: 'Returned to review' }
+          }
+        });
+
+        console.log(`Notification: Study ${study.title} has been returned to review`);
+
+        return NextResponse.json({ message: 'Study returned to review status' });
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -218,7 +273,7 @@ export async function GET(
         entityId: params.id,
         entity: 'Study',
         action: {
-          in: ['SUBMIT_FOR_REVIEW', 'APPROVE_STUDY', 'REJECT_STUDY', 'REQUEST_CHANGES', 'ACTIVATE_STUDY']
+          in: ['SUBMIT_FOR_REVIEW', 'APPROVE_STUDY', 'REJECT_STUDY', 'REQUEST_CHANGES', 'ACTIVATE_STUDY', 'INACTIVATE_STUDY']
         }
       },
       include: {

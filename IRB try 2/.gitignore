@@ -83,6 +83,8 @@ pnpm-debug.log*
 
 # Test
 /test-output.log
+/artifacts/
+/.serena/
 
 # Ngrok
 ngrok.yml
