@@ -73,7 +73,7 @@ export default function Dashboard() {
     { name: 'Documents', href: '/documents', icon: '📄', permission: 'view_documents' },
     { name: 'Reviews', href: '/reviews', icon: '✓', permission: 'review_studies' },
     { name: 'Users', href: '/users', icon: '👤', permission: 'manage_users' },
-    { name: 'Audit Log', href: '/audit', icon: '📊', permission: 'view_audit_logs' },
+    { name: 'Audit Log', href: '/audit-logs', icon: '📊', permission: 'view_audit_logs' },
   ];
 
   const hasPermission = (permission: string) => {
