@@ -44,9 +44,10 @@ export const validators = {
 
   protocolNumber: (value: string) => {
     if (!value) return null;
-    const protocolRegex = /^[A-Z0-9]{2,10}-[A-Z0-9]{3,10}$/;
+    // Allow formats like: ABC-1234, TEST-ABC123, TEST-PROTOCOL-123456789
+    const protocolRegex = /^[A-Z0-9]+([-][A-Z0-9]+)*$/;
     if (!protocolRegex.test(value)) {
-      return 'Protocol number must be in format: ABC-1234 or TEST-ABC123';
+      return 'Protocol number must contain only letters, numbers, and hyphens (e.g., ABC-1234, TEST-PROTOCOL-123)';
     }
     return null;
   },
