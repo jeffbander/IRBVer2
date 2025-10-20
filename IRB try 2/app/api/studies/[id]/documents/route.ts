@@ -69,7 +69,7 @@ export async function POST(
     if (contentType.includes('application/json')) {
       // Handle JSON request (no actual file, just metadata)
       const body = await request.json();
-      const { title, documentType, version = '1.0', filePath: mockFilePath, fileSize = 1024 } = body;
+      const { title, documentType, version = 1, filePath: mockFilePath, fileSize = 1024 } = body;
 
       if (!title || !documentType) {
         return NextResponse.json({ error: 'Title and documentType are required' }, { status: 400 });
