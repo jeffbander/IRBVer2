@@ -126,7 +126,8 @@ export async function POST(
     const name = formData.get('name') as string;
     const type = formData.get('type') as string;
     const description = formData.get('description') as string;
-    const version = formData.get('version') as string || '1.0';
+    const versionString = formData.get('version') as string;
+    const version = versionString ? parseInt(versionString, 10) : 1;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
