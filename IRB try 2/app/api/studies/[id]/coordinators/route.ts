@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { authenticateRequest } from '@/lib/auth';
+import { authenticateRequest } from '@/lib/middleware';
 import { canViewStudy, canManageCoordinators } from '@/lib/permissions';
-import { rateLimiters } from '@/lib/rateLimit';
+import { rateLimiters } from '@/lib/rate-limit';
 import { cors, handlePreflight } from '@/lib/cors';
-import { logAuditEvent } from '@/lib/audit';
+import { logStudyAction } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -222,16 +222,18 @@ export async function POST(
     });
 
     // Log audit event
-    await logAuditEvent({
+    await logStudyAction({
       userId: user.userId,
       action: 'ASSIGN_COORDINATOR',
-      entityType: 'STUDY',
-      entityId: params.id,
-      details: {
+      studyId: params.id,
+      studyTitle: study.title,
+      newValues: {
         coordinatorId,
         coordinatorName: `${coordinator.firstName} ${coordinator.lastName}`,
         assignmentId: assignment.id,
       },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      userAgent: request.headers.get('user-agent') || 'unknown',
     });
 
     return cors(

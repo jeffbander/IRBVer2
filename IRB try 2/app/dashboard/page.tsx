@@ -136,7 +136,7 @@ export default function Dashboard() {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-h1 text-brand-heading">Dashboard</h1>
-          <p className="text-body-large text-gray-600 mt-2">Welcome back, {user.firstName}. Here's an overview of your IRB activities.</p>
+          <p className="text-body-large text-gray-600 mt-2">Welcome back, {user.firstName}. Here&apos;s an overview of your IRB activities.</p>
         </div>
 
         {/* Stats - Mount Sinai Design System */}

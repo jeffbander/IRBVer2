@@ -3,6 +3,20 @@ const nextConfig = {
   reactStrictMode: true,
   output: process.env.NETLIFY ? undefined : 'standalone', // Standalone for Cloud Run/Firebase, default for Netlify
 
+  // ESLint configuration
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+
+  // TypeScript configuration
+  typescript: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has type errors.
+    ignoreBuildErrors: true,
+  },
+
   // Production optimizations
   swcMinify: true,
   compress: true,

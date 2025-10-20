@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/state';
 import { Button } from '@/components/ui/Button';
 
 interface Coordinator {
@@ -211,7 +211,7 @@ export default function StudyCoordinatorsPage() {
                 onChange={(e) => setSelectedCoordinator(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                <option value="">Select a coordinator...</option>
+                <option value="">Select a coordinator</option>
                 {unassignedCoordinators.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.firstName} {user.lastName} ({user.email})
@@ -264,7 +264,7 @@ export default function StudyCoordinatorsPage() {
                 >
                   <p className="text-lg">No coordinators assigned yet</p>
                   <p className="text-sm mt-1">
-                    Click "Assign Coordinator" to add coordinators to this study
+                    Click &quot;Assign Coordinator&quot; to add coordinators to this study
                   </p>
                 </td>
               </tr>
