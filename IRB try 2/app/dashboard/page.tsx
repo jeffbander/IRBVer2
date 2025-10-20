@@ -22,6 +22,12 @@ export default function Dashboard() {
       return;
     }
 
+    // Redirect coordinators to their specialized dashboard
+    if (user.role?.name === 'coordinator') {
+      router.push('/dashboard/coordinator');
+      return;
+    }
+
     // Fetch dashboard stats
     fetchStats(token);
   }, [router, token, user]);

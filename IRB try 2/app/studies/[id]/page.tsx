@@ -395,6 +395,16 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
                   Return to Review
                 </button>
               )}
+
+              {/* Manage Coordinators - Available to PI and Admins */}
+              {(isPI || isAdmin) && (
+                <button
+                  onClick={() => router.push(`/studies/${study.id}/coordinators`)}
+                  className="px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50"
+                >
+                  Manage Coordinators
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -232,3 +232,108 @@ export async function canDeleteStudy(userId: string, studyId: string): Promise<b
     return false;
   }
 }
+
+/**
+ * Check if a user can manage coordinators for a study
+ * - Admin: can manage coordinators for all studies
+ * - PI/Researcher: can manage coordinators for their own studies
+ * - Others: cannot manage coordinators
+ */
+export async function canManageCoordinators(
+  userId: string,
+  studyId: string
+): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+
+    if (!user || !user.active || !user.approved) {
+      return false;
+    }
+
+    const permissions = user.role.permissions as string[];
+
+    // Admins can manage all coordinators
+    if (permissions.includes('manage_users') || user.role.name === 'admin') {
+      return true;
+    }
+
+    // Principal Investigator can manage their study's coordinators
+    const study = await prisma.study.findUnique({
+      where: { id: studyId },
+    });
+
+    if (!study) {
+      return false;
+    }
+
+    return study.principalInvestigatorId === userId;
+  } catch (error) {
+    console.error('Error checking manage coordinators permission:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if a user can enroll patients in a specific study
+ * - Admin: can enroll in any study
+ * - PI/Researcher: can enroll in their own studies
+ * - Coordinator: can enroll ONLY in assigned studies
+ */
+export async function canEnrollPatient(
+  userId: string,
+  studyId: string
+): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+
+    if (!user || !user.active || !user.approved) {
+      return false;
+    }
+
+    const permissions = user.role.permissions as string[];
+
+    // Must have enroll_participants permission
+    if (!permissions.includes('enroll_participants')) {
+      return false;
+    }
+
+    // Admins can enroll in any study
+    if (user.role.name === 'admin') {
+      return true;
+    }
+
+    const study = await prisma.study.findUnique({
+      where: { id: studyId },
+      include: {
+        studyCoordinators: {
+          where: { coordinatorId: userId, active: true },
+        },
+      },
+    });
+
+    if (!study) {
+      return false;
+    }
+
+    // PI/Researcher can enroll in their own studies
+    if (study.principalInvestigatorId === userId) {
+      return true;
+    }
+
+    // Coordinator must be assigned to the study
+    if (user.role.name === 'coordinator') {
+      return study.studyCoordinators.length > 0;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error checking enroll patient permission:', error);
+    return false;
+  }
+}
