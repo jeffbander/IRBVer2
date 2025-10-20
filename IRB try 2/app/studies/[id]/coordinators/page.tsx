@@ -38,8 +38,15 @@ export default function StudyCoordinatorsPage() {
   const [selectedCoordinator, setSelectedCoordinator] = useState('');
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [newCoordinator, setNewCoordinator] = useState({
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+  });
 
   useEffect(() => {
     fetchCoordinators();
@@ -126,6 +133,49 @@ export default function StudyCoordinatorsPage() {
     }
   };
 
+  const handleCreateCoordinator = async () => {
+    if (!newCoordinator.email || !newCoordinator.password || !newCoordinator.firstName || !newCoordinator.lastName) {
+      setError('All fields are required');
+      return;
+    }
+
+    if (newCoordinator.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const response = await fetch('/api/coordinators', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newCoordinator),
+      });
+
+      if (response.ok) {
+        const createdCoordinator = await response.json();
+        setSuccessMessage(`Coordinator ${createdCoordinator.firstName} ${createdCoordinator.lastName} created successfully`);
+        setNewCoordinator({ email: '', password: '', firstName: '', lastName: '' });
+        setShowCreateForm(false);
+        await fetchAvailableCoordinators(); // Refresh the list
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to create coordinator');
+      }
+    } catch (err) {
+      console.error('Error creating coordinator:', err);
+      setError('Failed to create coordinator');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRemove = async (coordinatorId: string) => {
     if (!confirm('Are you sure you want to remove this coordinator from the study?')) {
       return;
@@ -176,9 +226,23 @@ export default function StudyCoordinatorsPage() {
           <h1 className="text-3xl font-bold text-heading-900">
             Manage Study Coordinators
           </h1>
-          <Button onClick={() => setShowAddForm(!showAddForm)}>
-            {showAddForm ? 'Cancel' : 'Assign Coordinator'}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowCreateForm(!showCreateForm);
+                setShowAddForm(false);
+              }}
+            >
+              {showCreateForm ? 'Cancel' : 'Create New Coordinator'}
+            </Button>
+            <Button onClick={() => {
+              setShowAddForm(!showAddForm);
+              setShowCreateForm(false);
+            }}>
+              {showAddForm ? 'Cancel' : 'Assign Existing'}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -191,6 +255,77 @@ export default function StudyCoordinatorsPage() {
       {successMessage && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
           <p className="text-green-800">{successMessage}</p>
+        </div>
+      )}
+
+      {showCreateForm && (
+        <div className="mb-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
+          <h2 className="text-xl font-semibold mb-4 text-brand-heading">Create New Coordinator</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Create a new coordinator account that can be assigned to your studies
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                First Name *
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                value={newCoordinator.firstName}
+                onChange={(e) => setNewCoordinator({ ...newCoordinator, firstName: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter first name"
+              />
+            </div>
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                Last Name *
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                value={newCoordinator.lastName}
+                onChange={(e) => setNewCoordinator({ ...newCoordinator, lastName: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter last name"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address *
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={newCoordinator.email}
+                onChange={(e) => setNewCoordinator({ ...newCoordinator, email: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="coordinator@example.com"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password * (min 8 characters)
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={newCoordinator.password}
+                onChange={(e) => setNewCoordinator({ ...newCoordinator, password: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter secure password"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              onClick={handleCreateCoordinator}
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create Coordinator'}
+            </Button>
+          </div>
         </div>
       )}
 
