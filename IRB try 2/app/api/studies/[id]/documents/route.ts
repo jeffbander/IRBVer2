@@ -107,7 +107,7 @@ export async function POST(
           action: 'UPLOAD_DOCUMENT',
           entity: 'Document',
           entityId: document.id,
-          details: {
+          metadata: {
             studyId: params.id,
             documentName: title,
             documentType: documentType,
@@ -237,7 +237,7 @@ export async function POST(
         action: 'UPLOAD_DOCUMENT',
         entity: 'Document',
         entityId: document.id,
-        details: {
+        metadata: {
           studyId: params.id,
           documentName: name,
           documentType: type,
@@ -280,7 +280,7 @@ export async function POST(
                 action: 'OCR_COMPLETED',
                 entity: 'Document',
                 entityId: document.id,
-                details: {
+                metadata: {
                   charactersExtracted: ocrResult.content.length,
                   model: ocrResult.model,
                   tokensUsed: ocrResult.tokensUsed,
