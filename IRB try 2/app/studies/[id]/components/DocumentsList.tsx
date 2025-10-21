@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { getChainNameForDocumentType } from '@/lib/aigents';
+import { OcrContentModal } from './OcrContentModal';
 
 interface Document {
   id: string;
@@ -19,6 +21,7 @@ interface Document {
   ocrContent?: string | null;
   ocrError?: string | null;
   ocrModel?: string | null;
+  ocrProcessedAt?: Date | null;
   isOcrSupported?: boolean;
 
   // Aigents fields
@@ -114,19 +117,19 @@ export default function DocumentsList({
       const result = await response.json();
       console.log('✅ AI Analysis triggered:', result);
 
-      alert(
-        `AI Analysis Started!\n\n` +
-        `Chain: ${result.chainName}\n` +
-        `Status: ${result.status}\n\n` +
-        `${result.message}`
-      );
+      toast.success('AI Analysis Started', {
+        description: `${result.chainName} - ${result.message}`,
+        duration: 6000,
+      });
 
       onDocumentUpdate();
       setShowConfirmModal(false);
       setSelectedDocument(null);
     } catch (error: any) {
       console.error('❌ Error triggering AI analysis:', error);
-      alert(`Error: ${error.message}`);
+      toast.error('Failed to start AI analysis', {
+        description: error.message,
+      });
     } finally {
       setSendingToAigents(false);
     }
@@ -152,11 +155,16 @@ export default function DocumentsList({
       const result = await response.json();
       console.log('✅ OCR triggered:', result);
 
-      alert(`OCR Processing Started!\n\nStatus: Processing\n\nResults will appear automatically when complete.`);
+      toast.success('OCR Processing Started', {
+        description: 'Text extraction in progress. Results will appear automatically when complete.',
+        duration: 5000,
+      });
       onDocumentUpdate();
     } catch (error: any) {
       console.error('❌ Error triggering OCR:', error);
-      alert(`Error: ${error.message}`);
+      toast.error('Failed to start OCR', {
+        description: error.message,
+      });
     } finally {
       setTriggeringOcr(false);
     }
@@ -176,13 +184,17 @@ export default function DocumentsList({
         throw new Error(error.error || 'Failed to delete document');
       }
 
-      alert(`Document "${document.name}" has been deleted.`);
+      toast.success('Document deleted', {
+        description: `"${document.name}" has been removed from this study.`,
+      });
       onDocumentUpdate();
       setShowDeleteConfirm(false);
       setDeletingDocument(null);
     } catch (error: any) {
       console.error('❌ Error deleting document:', error);
-      alert(`Error: ${error.message}`);
+      toast.error('Failed to delete document', {
+        description: error.message,
+      });
     }
   };
 
@@ -497,52 +509,20 @@ export default function DocumentsList({
 
       {/* OCR Content Modal */}
       {showOcrModal && ocrDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto p-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-semibold flex items-center gap-2">
-                  📄 OCR Extracted Text
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">{ocrDocument.name} (v{ocrDocument.version})</p>
-              </div>
-              <button
-                onClick={() => setShowOcrModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {ocrDocument.ocrModel && (
-              <div className="mb-4 flex items-center gap-2 text-sm">
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                  Extracted by {ocrDocument.ocrModel}
-                </span>
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
-                  {ocrDocument.ocrContent?.length || 0} characters
-                </span>
-              </div>
-            )}
-
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">
-                {ocrDocument.ocrContent || 'No OCR content available'}
-              </pre>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowOcrModal(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <OcrContentModal
+          isOpen={showOcrModal}
+          onClose={() => setShowOcrModal(false)}
+          document={{
+            id: ocrDocument.id,
+            name: ocrDocument.name,
+            ocrContent: ocrDocument.ocrContent || null,
+            ocrStatus: ocrDocument.ocrStatus || null,
+            ocrError: ocrDocument.ocrError || null,
+            ocrModel: ocrDocument.ocrModel || null,
+            ocrProcessedAt: ocrDocument.ocrProcessedAt || null,
+          }}
+          onRetry={() => handleTriggerOcr(ocrDocument)}
+        />
       )}
 
       {/* AI Analysis Display Modal */}

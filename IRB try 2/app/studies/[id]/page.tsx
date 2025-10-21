@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/lib/state';
 import DocumentsList from './components/DocumentsList';
+import { UploadProgress } from './components/UploadProgress';
 
 interface Study {
   id: string;
@@ -75,6 +77,8 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
     version: '1.0',
     file: null as File | null
   });
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<'uploading' | 'processing-ocr' | 'completed' | 'error'>('uploading');
 
   useEffect(() => {
     if (!token || !user) {
@@ -197,30 +201,47 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
 
   const handleUploadDocument = async () => {
     if (!uploadData.name || !uploadData.type || !uploadData.file) {
-      alert('Name, type, and file are required');
+      toast.error('Missing required fields', {
+        description: 'Name, type, and file are required',
+      });
       return;
     }
 
     if (!token) return;
 
     setSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', uploadData.file);
-      formData.append('name', uploadData.name);
-      formData.append('type', uploadData.type);
-      formData.append('description', uploadData.description);
-      formData.append('version', uploadData.version);
+    setUploadProgress(0);
+    setUploadStatus('uploading');
 
-      const response = await fetch(`/api/studies/${params.id}/documents`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+    const formData = new FormData();
+    formData.append('file', uploadData.file);
+    formData.append('name', uploadData.name);
+    formData.append('type', uploadData.type);
+    formData.append('description', uploadData.description);
+    formData.append('version', uploadData.version);
 
-      if (response.ok) {
+    // Use XMLHttpRequest for upload progress tracking
+    const xhr = new XMLHttpRequest();
+
+    // Track upload progress
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = Math.round((e.loaded / e.total) * 100);
+        setUploadProgress(percentComplete);
+      }
+    });
+
+    xhr.addEventListener('load', async () => {
+      if (xhr.status === 201) {
+        const response = JSON.parse(xhr.responseText);
+        setUploadStatus('completed');
+        setUploadProgress(100);
+
+        toast.success('Document uploaded successfully', {
+          description: `OCR processing will start automatically for ${uploadData.name}`,
+          duration: 6000,
+        });
+
         await fetchStudy(token);
         setShowUploadModal(false);
         setUploadData({
@@ -230,17 +251,34 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
           version: '1.0',
           file: null
         });
-        alert('Document uploaded successfully!');
+        setUploadProgress(0);
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to upload document');
+        setUploadStatus('error');
+        try {
+          const error = JSON.parse(xhr.responseText);
+          toast.error('Upload failed', {
+            description: error.error || 'Failed to upload document',
+          });
+        } catch {
+          toast.error('Upload failed', {
+            description: 'Unknown error occurred',
+          });
+        }
       }
-    } catch (error) {
-      console.error('Upload failed:', error);
-      alert('Failed to upload document');
-    } finally {
       setSubmitting(false);
-    }
+    });
+
+    xhr.addEventListener('error', () => {
+      setUploadStatus('error');
+      toast.error('Upload failed', {
+        description: 'Network error occurred. Please try again.',
+      });
+      setSubmitting(false);
+    });
+
+    xhr.open('POST', `/api/studies/${params.id}/documents`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.send(formData);
   };
 
   const getStatusBadge = (status: string) => {
@@ -829,6 +867,16 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
                   </p>
                 )}
               </div>
+
+              {/* Upload Progress Indicator */}
+              {submitting && uploadData.file && (
+                <UploadProgress
+                  fileName={uploadData.file.name}
+                  fileSize={uploadData.file.size}
+                  progress={uploadProgress}
+                  status={uploadStatus}
+                />
+              )}
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
