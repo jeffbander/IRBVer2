@@ -103,7 +103,7 @@ export async function triggerAigentsChain(
   const requestBody = {
     run_email: email,
     chain_to_run: chainToRun,
-    human_readable_record: 'IRB Management System - Document Analysis',
+    source_name: 'IRB Management System - Document Analysis',
     source_id: documentId || studyId || 'manual-trigger',
     first_step_user_input:
       firstStepInput ||
