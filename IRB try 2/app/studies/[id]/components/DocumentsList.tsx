@@ -327,9 +327,10 @@ export default function DocumentsList({
       animate: false
     };
 
-    return (
+    const isClickable = doc.ocrStatus === 'completed' && doc.ocrContent;
+    const BadgeContent = (
       <div className="inline-flex flex-col">
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${config.bg} ${config.text} ${config.animate ? 'animate-pulse' : ''}`}>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${config.bg} ${config.text} ${config.animate ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}>
           <span className={config.animate ? 'animate-spin' : ''}>{config.icon}</span>
           {config.label}
         </span>
@@ -340,6 +341,16 @@ export default function DocumentsList({
         )}
       </div>
     );
+
+    if (isClickable) {
+      return (
+        <button onClick={() => viewOcrContent(doc)} className="text-left">
+          {BadgeContent}
+        </button>
+      );
+    }
+
+    return BadgeContent;
   };
 
   const getAigentsStatusBadge = (doc: Document) => {

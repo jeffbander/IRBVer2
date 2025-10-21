@@ -1,195 +1,100 @@
-/**
- * Aigents Webhook Receiver (Bidirectional Pattern)
- * Receives webhook callbacks from Aigents when chain runs complete
- *
- * FLOW:
- * 1. Document uploaded → Trigger sent with Chain Run ID
- * 2. Aigents processes (15-25 seconds)
- * 3. Aigents sends webhook HERE with Chain Run ID
- * 4. We match Chain Run ID → AutomationLog → Update Document
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  updateAutomationLogByChainRunId,
-  getAutomationLogByChainRunId,
-} from '@/lib/automation-logs';
-import {
-  extractChainRunId,
-  extractAgentResponse,
-} from '@/lib/aigents';
 import { prisma } from '@/lib/prisma';
+import { extractChainRunId, extractAgentResponse } from '@/lib/aigents';
 
+/**
+ * Webhook endpoint for receiving Aigents AI analysis results
+ *
+ * Aigents calls this endpoint when AI processing completes
+ * We match the response to the document using the Chain Run ID
+ */
 export async function POST(request: NextRequest) {
-  console.log('\n🎣 Webhook received from Aigents');
-  const startTime = Date.now();
-
   try {
-    // Parse webhook payload
-    const webhookPayload = await request.json();
-    console.log('📦 Webhook payload keys:', Object.keys(webhookPayload));
+    console.log('= Received Aigents webhook');
 
-    // Extract Chain Run ID (THE KEY to linking request → response)
-    const chainRunId = extractChainRunId(webhookPayload);
+    // Parse the webhook payload
+    const payload = await request.json();
+    console.log('=� Webhook payload:', JSON.stringify(payload, null, 2));
 
+    // Extract Chain Run ID (used to match to the document)
+    const chainRunId = extractChainRunId(payload);
     if (!chainRunId) {
-      console.error('❌ No Chain Run ID found in webhook payload');
-      console.log('Payload:', JSON.stringify(webhookPayload, null, 2).substring(0, 500));
-
+      console.error('L No Chain Run ID found in webhook payload');
       return NextResponse.json(
-        {
-          error: 'No Chain Run ID found in webhook',
-          message: 'Cannot process webhook without Chain Run ID',
-          receivedFields: Object.keys(webhookPayload),
-        },
+        { error: 'Missing Chain Run ID' },
         { status: 400 }
       );
     }
 
-    console.log('🔗 Chain Run ID:', chainRunId);
+    console.log('= Chain Run ID:', chainRunId);
 
-    // Find the automation log for this chain run
-    const automationLog = await getAutomationLogByChainRunId(chainRunId);
+    // Find the document that triggered this analysis
+    const document = await prisma.document.findFirst({
+      where: { aigentsRunId: chainRunId },
+    });
 
-    if (!automationLog) {
-      console.error(`❌ No automation log found for Chain Run ID: ${chainRunId}`);
-
+    if (!document) {
+      console.error('L No document found for Chain Run ID:', chainRunId);
       return NextResponse.json(
-        {
-          error: 'Automation log not found',
-          chainRunId,
-          message: `No pending automation found for Chain Run ID: ${chainRunId}`,
-        },
+        { error: 'Document not found for this Chain Run ID' },
         { status: 404 }
       );
     }
 
-    console.log('✅ Found automation log:', {
-      id: automationLog.id,
-      chainName: automationLog.chainName,
-      documentId: automationLog.documentId,
-      studyId: automationLog.studyId,
-    });
+    console.log('=� Found document:', document.id, document.name);
 
-    // Extract agent response from webhook
-    const agentResponse = extractAgentResponse(webhookPayload);
-    const responsePreview = agentResponse.substring(0, 150) + (agentResponse.length > 150 ? '...' : '');
-    console.log('📄 Agent response extracted:', responsePreview);
+    // Extract the AI analysis response
+    const agentResponse = extractAgentResponse(payload);
+    if (!agentResponse) {
+      console.error('L No agent response found in webhook payload');
 
-    // Determine status from webhook
-    const webhookStatus = webhookPayload.status?.toLowerCase() || 'completed';
-    const status = webhookStatus === 'failed' ? 'failed' : 'completed';
-    const errorMessage =
-      status === 'failed' ? webhookPayload.error || 'Chain run failed' : undefined;
-
-    // Update automation log with response
-    const updatedLog = await updateAutomationLogByChainRunId(chainRunId, {
-      webhookPayload,
-      agentResponse,
-      status,
-      errorMessage,
-      isCompleted: true,
-    });
-
-    console.log('✅ Automation log updated:', {
-      id: updatedLog?.id,
-      status: updatedLog?.status,
-      isCompleted: updatedLog?.isCompleted,
-    });
-
-    // Also update the Document with AI analysis (if linked)
-    if (automationLog.documentId) {
+      // Update document status to failed
       await prisma.document.update({
-        where: { id: automationLog.documentId },
+        where: { id: document.id },
         data: {
-          aigentsStatus: status,
-          aigentsAnalysis: agentResponse,
-          aigentsCompletedAt: new Date(),
-          aigentsError: errorMessage,
-          aigentsRunId: chainRunId, // Store for backward compatibility
+          aigentsStatus: 'failed',
+          aigentsAnalysis: 'No response received from AI agent',
         },
       });
 
-      console.log('✅ Document updated with AI analysis');
+      return NextResponse.json(
+        { error: 'Missing agent response' },
+        { status: 400 }
+      );
     }
 
-    // Create audit log
-    if (automationLog.requestedBy) {
-      await prisma.auditLog.create({
-        data: {
-          userId: automationLog.requestedBy,
-          action: 'AIGENTS_WEBHOOK_RECEIVED',
-          entity: 'AutomationLog',
-          entityId: automationLog.id,
-          details: {
-            chainRunId,
-            chainName: automationLog.chainName,
-            status,
-            documentId: automationLog.documentId,
-            responseLength: agentResponse.length,
-            processingTime: Date.now() - startTime,
-          },
-        },
-      });
-    }
+    console.log('> Agent response length:', agentResponse.length, 'characters');
 
-    const processingTime = Date.now() - startTime;
-    console.log(`✅ Webhook processed successfully in ${processingTime}ms\n`);
-
-    // Return success to Aigents
-    return NextResponse.json({
-      message: 'Webhook processed successfully',
-      chainRunId,
-      automationLogId: automationLog.id,
-      documentId: automationLog.documentId,
-      status: 'success',
-      processingTimeMs: processingTime,
+    // Update the document with the analysis results
+    const updatedDocument = await prisma.document.update({
+      where: { id: document.id },
+      data: {
+        aigentsStatus: 'completed',
+        aigentsAnalysis: agentResponse,
+      },
     });
-  } catch (error: any) {
-    console.error('❌ Error processing webhook:', error);
+
+    console.log(' Document updated with AI analysis:', updatedDocument.id);
+    console.log('=� Analysis preview:', agentResponse.substring(0, 200) + '...');
+
+    // Return success response
+    return NextResponse.json({
+      success: true,
+      documentId: document.id,
+      chainRunId: chainRunId,
+      analysisLength: agentResponse.length,
+    });
+  } catch (error) {
+    console.error('L Error processing Aigents webhook:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
 
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
   }
-}
-
-/**
- * GET endpoint for testing/health check
- */
-export async function GET(request: NextRequest) {
-  // Get some stats about pending automations
-  const pending = await prisma.automationLog.count({
-    where: {
-      isCompleted: false,
-      status: 'processing',
-    },
-  });
-
-  const total = await prisma.automationLog.count();
-  const completed = await prisma.automationLog.count({
-    where: { isCompleted: true },
-  });
-
-  return NextResponse.json({
-    message: 'Aigents webhook endpoint is active',
-    endpoint: '/api/webhooks/aigents',
-    methods: ['POST', 'GET'],
-    instructions: [
-      '1. Configure this URL in your Aigents chain webhook settings',
-      '2. Ensure webhook includes "Chain Run ID" field',
-      '3. Include agent response in fields like: agentResponse, summ, Final_Output, etc.',
-    ],
-    stats: {
-      totalAutomations: total,
-      completed,
-      pending,
-    },
-    timestamp: new Date().toISOString(),
-  });
 }
