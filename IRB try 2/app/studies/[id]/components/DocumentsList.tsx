@@ -67,12 +67,16 @@ export default function DocumentsList({
 
   // Track which documents are processing for polling
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prevDocumentsRef = useRef<Document[]>([]);
+  const [isPolling, setIsPolling] = useState(false);
 
-  // Poll for updates on processing documents every 10 seconds
+  // Poll for updates on processing documents every 5 seconds (reduced from 10)
   useEffect(() => {
     const processingDocs = documents.filter(
       doc => doc.aigentsStatus === 'processing' || doc.ocrStatus === 'processing'
     );
+
+    setIsPolling(processingDocs.length > 0);
 
     if (processingDocs.length > 0) {
       console.log(`📡 Polling enabled for ${processingDocs.length} processing documents`);
@@ -80,7 +84,7 @@ export default function DocumentsList({
       pollingIntervalRef.current = setInterval(() => {
         console.log('🔄 Polling for document updates...');
         onDocumentUpdate();
-      }, 10000); // 10 seconds
+      }, 5000); // 5 seconds (reduced from 10)
     } else {
       if (pollingIntervalRef.current) {
         console.log('⏹️ Stopping polling (no processing documents)');
@@ -95,6 +99,71 @@ export default function DocumentsList({
       }
     };
   }, [documents, onDocumentUpdate]);
+
+  // Detect status changes and show completion notifications
+  useEffect(() => {
+    const prevDocs = prevDocumentsRef.current;
+
+    documents.forEach(doc => {
+      const prevDoc = prevDocs.find(d => d.id === doc.id);
+      if (!prevDoc) return;
+
+      // OCR completed
+      if (prevDoc.ocrStatus === 'processing' && doc.ocrStatus === 'completed') {
+        toast.success('OCR Processing Complete', {
+          description: `${doc.name} - ${Math.round((doc.ocrContent?.length || 0) / 1000)}k characters extracted`,
+          duration: 6000,
+          action: {
+            label: 'View OCR',
+            onClick: () => {
+              setOcrDocument(doc);
+              setShowOcrModal(true);
+            },
+          },
+        });
+      }
+
+      // OCR failed
+      if (prevDoc.ocrStatus === 'processing' && doc.ocrStatus === 'failed') {
+        toast.error('OCR Processing Failed', {
+          description: `${doc.name} - ${doc.ocrError || 'Unknown error'}`,
+          action: {
+            label: 'Retry',
+            onClick: () => handleTriggerOcr(doc),
+          },
+        });
+      }
+
+      // AI analysis completed
+      if (prevDoc.aigentsStatus === 'processing' && doc.aigentsStatus === 'completed') {
+        toast.success('AI Analysis Complete', {
+          description: `${doc.name} - Analysis ready to view`,
+          duration: 10000,
+          action: {
+            label: 'View Results',
+            onClick: () => {
+              setAnalysisDocument(doc);
+              setShowAnalysisModal(true);
+            },
+          },
+        });
+      }
+
+      // AI analysis failed
+      if (prevDoc.aigentsStatus === 'processing' && doc.aigentsStatus === 'failed') {
+        toast.error('AI Analysis Failed', {
+          description: `${doc.name} - Please try again`,
+          action: {
+            label: 'Retry',
+            onClick: () => handleTriggerAnalysis(doc),
+          },
+        });
+      }
+    });
+
+    // Update previous state
+    prevDocumentsRef.current = documents;
+  }, [documents]);
 
   const handleTriggerAnalysis = async (document: Document) => {
     setSendingToAigents(true);
@@ -203,44 +272,135 @@ export default function DocumentsList({
     setShowOcrModal(true);
   };
 
-  const getOcrStatusBadge = (status: string | null | undefined) => {
-    if (!status) return null;
+  const getOcrStatusBadge = (doc: Document) => {
+    if (!doc.ocrStatus) return null;
 
-    const configs: Record<string, { bg: string; text: string; label: string; icon: string; animate?: boolean }> = {
-      pending: { bg: 'bg-gradient-to-r from-yellow-400 to-orange-400', text: 'text-white', label: 'OCR Pending', icon: '⏱️', animate: false },
-      processing: { bg: 'bg-gradient-to-r from-blue-500 to-cyan-500', text: 'text-white', label: 'OCR Processing', icon: '⚡', animate: true },
-      completed: { bg: 'bg-gradient-to-r from-green-500 to-emerald-600', text: 'text-white', label: 'OCR Complete', icon: '✓', animate: false },
-      failed: { bg: 'bg-gradient-to-r from-red-500 to-rose-600', text: 'text-white', label: 'OCR Failed', icon: '✗', animate: false },
-      not_supported: { bg: 'bg-gray-200', text: 'text-gray-600', label: 'Not Supported', icon: '—', animate: false },
+    const configs: Record<string, { bg: string; text: string; label: string; subtext: string; icon: string; animate?: boolean }> = {
+      pending: {
+        bg: 'bg-gradient-to-r from-yellow-400 to-orange-400',
+        text: 'text-white',
+        label: 'OCR Queued',
+        subtext: 'Starting soon...',
+        icon: '⏱️',
+        animate: false
+      },
+      processing: {
+        bg: 'bg-gradient-to-r from-blue-500 to-cyan-500',
+        text: 'text-white',
+        label: 'OCR Processing',
+        subtext: '~10-30 seconds',
+        icon: '⚡',
+        animate: true
+      },
+      completed: {
+        bg: 'bg-gradient-to-r from-green-500 to-emerald-600',
+        text: 'text-white',
+        label: 'OCR Complete',
+        subtext: doc.ocrContent ? `${Math.round(doc.ocrContent.length / 1000)}k chars` : 'Done',
+        icon: '✓',
+        animate: false
+      },
+      failed: {
+        bg: 'bg-gradient-to-r from-red-500 to-rose-600',
+        text: 'text-white',
+        label: 'OCR Failed',
+        subtext: 'Click to retry',
+        icon: '✗',
+        animate: false
+      },
+      not_supported: {
+        bg: 'bg-gray-200',
+        text: 'text-gray-600',
+        label: 'Not Supported',
+        subtext: 'File type unsupported',
+        icon: '—',
+        animate: false
+      },
     };
 
-    const config = configs[status] || { bg: 'bg-gray-200', text: 'text-gray-800', label: `OCR: ${status}`, icon: '?', animate: false };
+    const config = configs[doc.ocrStatus] || {
+      bg: 'bg-gray-200',
+      text: 'text-gray-800',
+      label: `OCR: ${doc.ocrStatus}`,
+      subtext: '',
+      icon: '?',
+      animate: false
+    };
 
     return (
-      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${config.bg} ${config.text} ${config.animate ? 'animate-pulse' : ''}`}>
-        <span className={config.animate ? 'animate-spin' : ''}>{config.icon}</span>
-        {config.label}
-      </span>
+      <div className="inline-flex flex-col">
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${config.bg} ${config.text} ${config.animate ? 'animate-pulse' : ''}`}>
+          <span className={config.animate ? 'animate-spin' : ''}>{config.icon}</span>
+          {config.label}
+        </span>
+        {config.subtext && (
+          <span className="text-xs text-gray-500 mt-0.5 ml-1">
+            {config.subtext}
+          </span>
+        )}
+      </div>
     );
   };
 
-  const getAigentsStatusBadge = (status: string | null | undefined) => {
-    if (!status) return null;
+  const getAigentsStatusBadge = (doc: Document) => {
+    if (!doc.aigentsStatus) return null;
 
-    const configs: Record<string, { bg: string; text: string; label: string; icon: string; animate?: boolean }> = {
-      pending: { bg: 'bg-gradient-to-r from-amber-400 to-yellow-500', text: 'text-white', label: 'AI Pending', icon: '🔄', animate: false },
-      processing: { bg: 'bg-gradient-to-r from-purple-500 to-pink-600', text: 'text-white', label: 'AI Analyzing', icon: '🤖', animate: true },
-      completed: { bg: 'bg-gradient-to-r from-green-500 to-teal-600', text: 'text-white', label: 'AI Complete', icon: '✨', animate: false },
-      failed: { bg: 'bg-gradient-to-r from-red-500 to-pink-600', text: 'text-white', label: 'AI Failed', icon: '⚠️', animate: false },
+    const configs: Record<string, { bg: string; text: string; label: string; subtext: string; icon: string; animate?: boolean }> = {
+      pending: {
+        bg: 'bg-gradient-to-r from-amber-400 to-yellow-500',
+        text: 'text-white',
+        label: 'AI Queued',
+        subtext: 'Waiting to start...',
+        icon: '🔄',
+        animate: false
+      },
+      processing: {
+        bg: 'bg-gradient-to-r from-purple-500 to-pink-600',
+        text: 'text-white',
+        label: 'AI Analyzing',
+        subtext: '~15-30 seconds',
+        icon: '🤖',
+        animate: true
+      },
+      completed: {
+        bg: 'bg-gradient-to-r from-green-500 to-teal-600',
+        text: 'text-white',
+        label: 'AI Complete',
+        subtext: 'View results →',
+        icon: '✨',
+        animate: false
+      },
+      failed: {
+        bg: 'bg-gradient-to-r from-red-500 to-pink-600',
+        text: 'text-white',
+        label: 'AI Failed',
+        subtext: 'Click to retry',
+        icon: '⚠️',
+        animate: false
+      },
     };
 
-    const config = configs[status] || { bg: 'bg-gray-200', text: 'text-gray-800', label: `AI: ${status}`, icon: '?', animate: false };
+    const config = configs[doc.aigentsStatus] || {
+      bg: 'bg-gray-200',
+      text: 'text-gray-800',
+      label: `AI: ${doc.aigentsStatus}`,
+      subtext: '',
+      icon: '?',
+      animate: false
+    };
 
     return (
-      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${config.bg} ${config.text} ${config.animate ? 'animate-pulse' : ''}`}>
-        <span className={config.animate ? 'animate-bounce' : ''}>{config.icon}</span>
-        {config.label}
-      </span>
+      <div className="inline-flex flex-col">
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${config.bg} ${config.text} ${config.animate ? 'animate-pulse' : ''}`}>
+          <span className={config.animate ? 'animate-bounce' : ''}>{config.icon}</span>
+          {config.label}
+        </span>
+        {config.subtext && (
+          <span className="text-xs text-gray-500 mt-0.5 ml-1">
+            {config.subtext}
+          </span>
+        )}
+      </div>
     );
   };
 
@@ -248,6 +408,21 @@ export default function DocumentsList({
 
   return (
     <>
+      {/* Screen reader announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {documents.filter(d => d.ocrStatus === 'processing').length > 0 && (
+          `${documents.filter(d => d.ocrStatus === 'processing').length} document${documents.filter(d => d.ocrStatus === 'processing').length > 1 ? 's' : ''} currently processing OCR`
+        )}
+        {documents.filter(d => d.aigentsStatus === 'processing').length > 0 && (
+          ` ${documents.filter(d => d.aigentsStatus === 'processing').length} document${documents.filter(d => d.aigentsStatus === 'processing').length > 1 ? 's' : ''} currently being analyzed by AI`
+        )}
+      </div>
+
       <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 border border-gray-100">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
@@ -272,6 +447,32 @@ export default function DocumentsList({
           )}
         </div>
 
+        {/* Polling Indicator */}
+        {isPolling && (
+          <div
+            className="mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3"
+            role="status"
+            aria-live="polite"
+          >
+            <svg
+              className="w-5 h-5 text-blue-600 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900">
+                Checking for updates...
+              </p>
+              <p className="text-xs text-blue-700">
+                Documents are being processed. This page will update automatically every 5 seconds.
+              </p>
+            </div>
+          </div>
+        )}
+
         {documents.length > 0 ? (
           <div className="space-y-3">
             {documents.map((doc) => (
@@ -290,8 +491,8 @@ export default function DocumentsList({
                           Old Version
                         </span>
                       )}
-                      {getOcrStatusBadge(doc.ocrStatus)}
-                      {getAigentsStatusBadge(doc.aigentsStatus)}
+                      {getOcrStatusBadge(doc)}
+                      {getAigentsStatusBadge(doc)}
                     </div>
                     <p className="text-xs text-gray-500 font-medium mb-2 flex items-center gap-2">
                       <span className="px-2 py-0.5 bg-gray-100 rounded-full">{doc.type.replace(/_/g, ' ')}</span>
