@@ -724,7 +724,7 @@ export default function DocumentsList({
         <OcrContentModal
           isOpen={showOcrModal}
           onClose={() => setShowOcrModal(false)}
-          document={{
+          documentData={{
             id: ocrDocument.id,
             name: ocrDocument.name,
             ocrContent: ocrDocument.ocrContent || null,

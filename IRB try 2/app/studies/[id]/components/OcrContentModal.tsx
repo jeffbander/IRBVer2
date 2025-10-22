@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 interface OcrContentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  document: {
+  documentData: {
     id: string;
     name: string;
     ocrContent: string | null;
@@ -20,7 +20,7 @@ interface OcrContentModalProps {
 export function OcrContentModal({
   isOpen,
   onClose,
-  document,
+  documentData,
   onRetry,
 }: OcrContentModalProps) {
   const [copySuccess, setCopySuccess] = useState(false);
@@ -48,17 +48,17 @@ export function OcrContentModal({
   if (!isOpen) return null;
 
   const handleCopy = async () => {
-    if (document.ocrContent) {
-      await navigator.clipboard.writeText(document.ocrContent);
+    if (documentData.ocrContent) {
+      await navigator.clipboard.writeText(documentData.ocrContent);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     }
   };
 
-  const wordCount = document.ocrContent
-    ? document.ocrContent.split(/\s+/).length
+  const wordCount = documentData.ocrContent
+    ? documentData.ocrContent.split(/\s+/).length
     : 0;
-  const charCount = document.ocrContent?.length || 0;
+  const charCount = documentData.ocrContent?.length || 0;
 
   return (
     <div
@@ -80,7 +80,7 @@ export function OcrContentModal({
               OCR Extracted Content
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              {document.name}
+              {documentData.name}
             </p>
           </div>
           <button
@@ -100,7 +100,7 @@ export function OcrContentModal({
             <div>
               <span className="text-gray-600">Model:</span>
               <span className="ml-2 font-medium text-gray-900">
-                {document.ocrModel || 'Unknown'}
+                {documentData.ocrModel || 'Unknown'}
               </span>
             </div>
             <div>
@@ -115,11 +115,11 @@ export function OcrContentModal({
                 {charCount.toLocaleString()}
               </span>
             </div>
-            {document.ocrProcessedAt && (
+            {documentData.ocrProcessedAt && (
               <div>
                 <span className="text-gray-600">Processed:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {new Date(document.ocrProcessedAt).toLocaleString()}
+                  {new Date(documentData.ocrProcessedAt).toLocaleString()}
                 </span>
               </div>
             )}
@@ -148,17 +148,17 @@ export function OcrContentModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {document.ocrStatus === 'completed' && document.ocrContent ? (
+          {documentData.ocrStatus === 'completed' && documentData.ocrContent ? (
             <div
               className="prose prose-sm max-w-none"
               role="region"
               aria-label="OCR extracted text"
             >
               <pre className="whitespace-pre-wrap font-sans text-gray-800 leading-relaxed">
-                {document.ocrContent}
+                {documentData.ocrContent}
               </pre>
             </div>
-          ) : document.ocrStatus === 'failed' ? (
+          ) : documentData.ocrStatus === 'failed' ? (
             <div className="text-center py-12">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
                 <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +169,7 @@ export function OcrContentModal({
                 OCR Processing Failed
               </h3>
               <p className="text-gray-600 mb-4">
-                {document.ocrError || 'An error occurred during OCR processing'}
+                {documentData.ocrError || 'An error occurred during OCR processing'}
               </p>
               {onRetry && (
                 <button
