@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/lib/state';
 import DocumentsList from './components/DocumentsList';
 import { UploadProgress } from './components/UploadProgress';
+import AiAnalysisDashboard from './components/AiAnalysisDashboard';
 
 interface Study {
   id: string;
@@ -584,6 +585,11 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
               onUploadClick={() => setShowUploadModal(true)}
               onDocumentUpdate={() => fetchStudy(token!)}
             />
+
+            {/* AI Protocol Analysis */}
+            <div className="mt-6">
+              <AiAnalysisDashboard studyId={params.id} userId={user?.id || ''} />
+            </div>
 
             {/* Participants */}
             <div className="bg-white rounded-lg shadow-sm p-6">
