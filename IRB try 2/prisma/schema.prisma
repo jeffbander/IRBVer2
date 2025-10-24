@@ -526,3 +526,54 @@ model HistoricalMetric {
   @@index([phase])
   @@index([therapeuticArea])
 }
+
+// Phase 4: Real-time Collaboration
+model ProtocolComment {
+  id           String   @id @default(cuid())
+  studyId      String
+  userId       String
+  section      String // Which section/field this comment refers to
+  content      String
+  resolved     Boolean  @default(false)
+  resolvedById String?
+  resolvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studyId])
+  @@index([userId])
+  @@index([resolved])
+  @@index([section])
+}
+
+model ProtocolVersion {
+  id              String   @id @default(cuid())
+  studyId         String
+  versionNumber   Int
+  changes         String // JSON string of changes
+  changedBy       String // User ID
+  changeType      String // major, minor, patch
+  changeNotes     String?
+  previousVersion String? // ID of previous version
+
+  createdAt DateTime @default(now())
+
+  @@unique([studyId, versionNumber])
+  @@index([studyId])
+  @@index([versionNumber])
+  @@index([createdAt])
+}
+
+model CollaborationSession {
+  id              String   @id @default(cuid())
+  studyId         String
+  activeUsers     String // JSON array of user IDs currently viewing/editing
+  lastActivity    DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studyId])
+  @@index([lastActivity])
+}
