@@ -14,7 +14,7 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // Will be hashed
+  password  String // Will be hashed
   firstName String
   lastName  String
   role      Role     @relation(fields: [roleId], references: [id])
@@ -25,12 +25,13 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  studiesAsPI        Study[]       @relation("PrincipalInvestigator")
-  studiesAsReviewer  Study[]       @relation("Reviewer")
+  studiesAsPI        Study[]            @relation("PrincipalInvestigator")
+  studiesAsReviewer  Study[]            @relation("Reviewer")
   studyCoordinators  StudyCoordinator[]
-  enrollments        Enrollment[]  @relation("EnrolledBy")
-  documents          Document[]    @relation("UploadedBy")
+  enrollments        Enrollment[]       @relation("EnrolledBy")
+  documents          Document[]         @relation("UploadedBy")
   auditLogs          AuditLog[]
+  aiAnalysisFeedback UserFeedback[]
 
   @@index([email])
   @@index([roleId])
@@ -42,7 +43,7 @@ model Role {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
-  permissions Json     // Store permissions as JSON
+  permissions Json // Store permissions as JSON
   users       User[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -52,16 +53,16 @@ model AuditLog {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id])
-  action     String   // CREATE, UPDATE, DELETE, APPROVE, etc.
-  entity     String   // Study, Participant, Document, User, etc.
+  action     String // CREATE, UPDATE, DELETE, APPROVE, etc.
+  entity     String // Study, Participant, Document, User, etc.
   entityId   String
-  entityName String?  // Human-readable entity name
-  oldValues  Json?    // Previous state
-  newValues  Json?    // New state
-  changes    Json?    // Specific fields changed
+  entityName String? // Human-readable entity name
+  oldValues  Json? // Previous state
+  newValues  Json? // New state
+  changes    Json? // Specific fields changed
   ipAddress  String?
   userAgent  String?
-  metadata   Json?    // Additional context
+  metadata   Json? // Additional context
   createdAt  DateTime @default(now())
 
   @@index([userId])
@@ -72,31 +73,33 @@ model AuditLog {
 
 // Existing models with updates
 model Study {
-  id                String       @id @default(cuid())
-  title             String
-  protocolNumber    String       @unique
+  id                      String      @id @default(cuid())
+  title                   String
+  protocolNumber          String      @unique
   principalInvestigatorId String
-  principalInvestigator User      @relation("PrincipalInvestigator", fields: [principalInvestigatorId], references: [id])
-  reviewerId        String?
-  reviewer          User?        @relation("Reviewer", fields: [reviewerId], references: [id])
-  status            StudyStatus  @default(DRAFT)
-  type              StudyType
-  description       String
-  startDate         DateTime?
-  endDate           DateTime?
-  targetEnrollment  Int?
-  currentEnrollment Int          @default(0)
-  irbApprovalDate   DateTime?
-  irbExpirationDate DateTime?
-  riskLevel         RiskLevel    @default(MINIMAL)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  principalInvestigator   User        @relation("PrincipalInvestigator", fields: [principalInvestigatorId], references: [id])
+  reviewerId              String?
+  reviewer                User?       @relation("Reviewer", fields: [reviewerId], references: [id])
+  status                  StudyStatus @default(DRAFT)
+  type                    StudyType
+  description             String
+  startDate               DateTime?
+  endDate                 DateTime?
+  targetEnrollment        Int?
+  currentEnrollment       Int         @default(0)
+  irbApprovalDate         DateTime?
+  irbExpirationDate       DateTime?
+  riskLevel               RiskLevel   @default(MINIMAL)
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
 
   participants      Participant[]
   enrollments       Enrollment[]
   documents         Document[]
   studyCoordinators StudyCoordinator[]
   studyVisits       StudyVisit[]
+  aiAnalysis        AiAnalysis?
+  similarities      ProtocolSimilarity[]
 
   @@index([status])
   @@index([type])
@@ -106,25 +109,25 @@ model Study {
 }
 
 model Participant {
-  id             String       @id @default(cuid())
-  studyId        String
-  study          Study        @relation(fields: [studyId], references: [id])
-  participantId  String       @unique
-  subjectId      String       // IRB subject identifier
-  firstName      String?
-  lastName       String?
-  dateOfBirth    DateTime?
-  email          String?
-  phone          String?
-  address        String?
-  consentDate    DateTime?
-  consentVersion String?
-  enrollmentDate DateTime?
-  groupAssignment String?     // Treatment/Control group
-  status         ParticipantStatus @default(SCREENING)
-  notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String            @id @default(cuid())
+  studyId         String
+  study           Study             @relation(fields: [studyId], references: [id])
+  participantId   String            @unique
+  subjectId       String // IRB subject identifier
+  firstName       String?
+  lastName        String?
+  dateOfBirth     DateTime?
+  email           String?
+  phone           String?
+  address         String?
+  consentDate     DateTime?
+  consentVersion  String?
+  enrollmentDate  DateTime?
+  groupAssignment String? // Treatment/Control group
+  status          ParticipantStatus @default(SCREENING)
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   enrollments       Enrollment[]
   participantVisits ParticipantVisit[]
@@ -133,66 +136,66 @@ model Participant {
 }
 
 model Enrollment {
-  id            String   @id @default(cuid())
-  studyId       String
-  study         Study    @relation(fields: [studyId], references: [id])
-  participantId String
-  participant   Participant @relation(fields: [participantId], references: [id])
-  enrollmentDate DateTime @default(now())
-  enrolledById  String
-  enrolledBy    User     @relation("EnrolledBy", fields: [enrolledById], references: [id])
-  status        EnrollmentStatus @default(ACTIVE)
-  withdrawalDate DateTime?
+  id               String           @id @default(cuid())
+  studyId          String
+  study            Study            @relation(fields: [studyId], references: [id])
+  participantId    String
+  participant      Participant      @relation(fields: [participantId], references: [id])
+  enrollmentDate   DateTime         @default(now())
+  enrolledById     String
+  enrolledBy       User             @relation("EnrolledBy", fields: [enrolledById], references: [id])
+  status           EnrollmentStatus @default(ACTIVE)
+  withdrawalDate   DateTime?
   withdrawalReason String?
-  completionDate DateTime?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  completionDate   DateTime?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@unique([studyId, participantId])
 }
 
 model Document {
-  id           String       @id @default(cuid())
-  studyId      String
-  study        Study        @relation(fields: [studyId], references: [id])
-  name         String
-  type         DocumentType
-  version      Int          @default(1)  // Auto-incremented version number
-  description  String?
-  filePath     String
-  fileSize     Int
-  mimeType     String
-  uploadedById String
-  uploadedBy   User         @relation("UploadedBy", fields: [uploadedById], references: [id])
-  status       DocumentStatus @default(ACTIVE)
-  approvalDate DateTime?
+  id             String         @id @default(cuid())
+  studyId        String
+  study          Study          @relation(fields: [studyId], references: [id])
+  name           String
+  type           DocumentType
+  version        Int            @default(1) // Auto-incremented version number
+  description    String?
+  filePath       String
+  fileSize       Int
+  mimeType       String
+  uploadedById   String
+  uploadedBy     User           @relation("UploadedBy", fields: [uploadedById], references: [id])
+  status         DocumentStatus @default(ACTIVE)
+  approvalDate   DateTime?
   expirationDate DateTime?
 
   // OCR fields
-  ocrContent   String?      // Extracted text content from OCR
-  ocrStatus    String?      // pending, processing, completed, failed, not_supported
-  ocrError     String?      // Error message if OCR failed
-  ocrModel     String?      // Model used for OCR (e.g., "claude-3-5-sonnet-20241022")
-  ocrProcessedAt DateTime?  // When OCR was completed
-  isOcrSupported Boolean    @default(false) // Whether file type supports OCR
+  ocrContent     String? // Extracted text content from OCR
+  ocrStatus      String? // pending, processing, completed, failed, not_supported
+  ocrError       String? // Error message if OCR failed
+  ocrModel       String? // Model used for OCR (e.g., "claude-3-5-sonnet-20241022")
+  ocrProcessedAt DateTime? // When OCR was completed
+  isOcrSupported Boolean   @default(false) // Whether file type supports OCR
 
   // Document versioning
-  parentDocumentId String?  // Links to previous version of same document
-  isLatestVersion Boolean   @default(true) // Only latest version is true
-  versionNotes String?      // Notes about what changed in this version
+  parentDocumentId String? // Links to previous version of same document
+  isLatestVersion  Boolean @default(true) // Only latest version is true
+  versionNotes     String? // Notes about what changed in this version
 
   // Aigents integration fields
-  aigentsChainName String?
-  aigentsRunId     String?
-  aigentsStatus    String?      // pending, processing, completed, failed
-  aigentsAnalysis  String?      // AI analysis result
-  aigentstartedAt DateTime?
+  aigentsChainName   String?
+  aigentsRunId       String?
+  aigentsStatus      String? // pending, processing, completed, failed
+  aigentsAnalysis    String? // AI analysis result
+  aigentstartedAt    DateTime?
   aigentsCompletedAt DateTime?
-  aigentsError     String?
+  aigentsError       String?
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   automationLogs AutomationLog[]
 
@@ -206,32 +209,32 @@ model Document {
 
 // Automation/Webhook tracking
 model AutomationLog {
-  id              String    @id @default(cuid())
-  chainName       String    // "Protocol analyzer", "Consent Form Reviewer", etc.
-  chainRunId      String    @unique // THE KEY - links request to webhook response
+  id         String @id @default(cuid())
+  chainName  String // "Protocol analyzer", "Consent Form Reviewer", etc.
+  chainRunId String @unique // THE KEY - links request to webhook response
 
   // Relations
-  documentId      String?
-  document        Document? @relation(fields: [documentId], references: [id])
-  studyId         String?
-  requestedBy     String?   // User ID who triggered
+  documentId  String?
+  document    Document? @relation(fields: [documentId], references: [id])
+  studyId     String?
+  requestedBy String? // User ID who triggered
 
   // Request tracking
-  requestData     String?   // JSON string of what we sent
-  requestedAt     DateTime  @default(now())
+  requestData String? // JSON string of what we sent
+  requestedAt DateTime @default(now())
 
   // Response tracking
-  webhookPayload  String?   // JSON string of complete webhook received
-  agentResponse   String?   // Parsed response text
+  webhookPayload  String? // JSON string of complete webhook received
+  agentResponse   String? // Parsed response text
   agentReceivedAt DateTime?
 
   // Status
-  isCompleted     Boolean   @default(false)
-  status          String    @default("processing") // processing|completed|failed
-  errorMessage    String?
+  isCompleted  Boolean @default(false)
+  status       String  @default("processing") // processing|completed|failed
+  errorMessage String?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([chainRunId])
   @@index([documentId])
@@ -307,7 +310,7 @@ model StudyCoordinator {
   coordinatorId String
   coordinator   User     @relation(fields: [coordinatorId], references: [id], onDelete: Cascade)
   assignedAt    DateTime @default(now())
-  assignedBy    String   // User ID who made the assignment
+  assignedBy    String // User ID who made the assignment
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -325,11 +328,11 @@ model StudyVisit {
   study           Study    @relation(fields: [studyId], references: [id], onDelete: Cascade)
   visitNumber     Int
   visitName       String
-  visitType       String   // Screening, Baseline, Follow-up, etc.
-  windowDays      Int?     // Visit window (+/- days)
+  visitType       String // Screening, Baseline, Follow-up, etc.
+  windowDays      Int? // Visit window (+/- days)
   description     String?
-  expectedPayment Float?   // Payment for this visit
-  procedures      String?  // JSON string of procedures/tests
+  expectedPayment Float? // Payment for this visit
+  procedures      String? // JSON string of procedures/tests
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -341,23 +344,160 @@ model StudyVisit {
 
 // Future: Track actual participant visits
 model ParticipantVisit {
-  id             String    @id @default(cuid())
-  participantId  String
-  participant    Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  studyVisitId   String
-  studyVisit     StudyVisit @relation(fields: [studyVisitId], references: [id], onDelete: Cascade)
-  scheduledDate  DateTime?
-  completedDate  DateTime?
-  status         String    @default("scheduled") // scheduled, completed, missed, cancelled
-  notes          String?
-  paymentIssued  Boolean   @default(false)
-  paymentAmount  Float?
-  clinicalData   String?   // JSON string for visit-specific clinical data
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String      @id @default(cuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  studyVisitId  String
+  studyVisit    StudyVisit  @relation(fields: [studyVisitId], references: [id], onDelete: Cascade)
+  scheduledDate DateTime?
+  completedDate DateTime?
+  status        String      @default("scheduled") // scheduled, completed, missed, cancelled
+  notes         String?
+  paymentIssued Boolean     @default(false)
+  paymentAmount Float?
+  clinicalData  String? // JSON string for visit-specific clinical data
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([participantId])
   @@index([studyVisitId])
   @@index([status])
   @@index([scheduledDate])
+}
+
+// AI-Powered Protocol Analysis Models
+model AiAnalysis {
+  id      String @id @default(cuid())
+  studyId String @unique
+  status  String // pending, processing, completed, failed
+  model   String // gpt-4o, claude-3.5-sonnet
+
+  // Results
+  studyMetadata    String? // JSON string of study metadata
+  executiveSummary String?
+  complexityScore  Int? // 1-10 scale
+  complianceScore  Int? // 0-100 percentage
+  riskLevel        String? // low, medium, high, critical
+  processingTimeMs Int?
+  errorMessage     String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  study            Study                @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  criteria         Criterion[]
+  visitSchedule    VisitSchedule[]
+  budgetEstimate   BudgetEstimate?
+  complianceChecks ComplianceCheck[]
+  similarities     ProtocolSimilarity[] @relation("SourceAnalysis")
+  userFeedback     UserFeedback[]
+
+  @@index([studyId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Criterion {
+  id            String  @id @default(cuid())
+  aiAnalysisId  String
+  type          String // inclusion, exclusion
+  category      String // age, medical_history, medication, laboratory, etc.
+  description   String
+  originalText  String
+  logicOperator String? // AND, OR, NOT
+  priority      Int     @default(0)
+  confidence    Float? // AI confidence score (0.0-1.0)
+
+  createdAt  DateTime   @default(now())
+  aiAnalysis AiAnalysis @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([aiAnalysisId])
+  @@index([type])
+  @@index([category])
+}
+
+model VisitSchedule {
+  id           String  @id @default(cuid())
+  aiAnalysisId String
+  visitName    String
+  visitNumber  Int
+  dayRange     String // "Day 0", "Week 1", "Month 3"
+  procedures   String // JSON array of procedures/assessments
+  duration     String?
+  notes        String?
+
+  createdAt  DateTime   @default(now())
+  aiAnalysis AiAnalysis @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([aiAnalysisId])
+  @@index([visitNumber])
+}
+
+model BudgetEstimate {
+  id                 String  @id @default(cuid())
+  aiAnalysisId       String  @unique
+  totalEstimate      Float // Total estimated cost
+  perParticipantCost Float // Cost per participant
+  breakdown          String // JSON breakdown by category
+  assumptions        String?
+
+  createdAt  DateTime   @default(now())
+  aiAnalysis AiAnalysis @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([aiAnalysisId])
+}
+
+model ComplianceCheck {
+  id             String  @id @default(cuid())
+  aiAnalysisId   String
+  regulation     String // FDA_21CFR11, ICH_GCP, HIPAA, etc.
+  status         String // compliant, non_compliant, needs_review
+  finding        String
+  recommendation String?
+  severity       String // low, medium, high, critical
+
+  createdAt  DateTime   @default(now())
+  aiAnalysis AiAnalysis @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([aiAnalysisId])
+  @@index([regulation])
+  @@index([status])
+  @@index([severity])
+}
+
+model ProtocolSimilarity {
+  id              String @id @default(cuid())
+  aiAnalysisId    String
+  similarStudyId  String
+  similarityScore Float // 0.0 to 1.0
+  matchingAspects String // JSON of what aspects are similar
+
+  createdAt    DateTime   @default(now())
+  aiAnalysis   AiAnalysis @relation("SourceAnalysis", fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+  similarStudy Study      @relation(fields: [similarStudyId], references: [id], onDelete: Cascade)
+
+  @@index([aiAnalysisId])
+  @@index([similarStudyId])
+  @@index([similarityScore])
+}
+
+model UserFeedback {
+  id            String  @id @default(cuid())
+  aiAnalysisId  String
+  userId        String
+  feedbackType  String // accuracy, completeness, usefulness
+  rating        Int // 1-5
+  comment       String?
+  correctedData String? // JSON user corrections for retraining
+
+  createdAt  DateTime   @default(now())
+  aiAnalysis AiAnalysis @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@index([aiAnalysisId])
+  @@index([userId])
+  @@index([feedbackType])
+  @@index([rating])
 }
