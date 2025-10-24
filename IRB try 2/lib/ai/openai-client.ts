@@ -21,6 +21,22 @@ export interface VisitScheduleOptions {
   protocolText: string;
 }
 
+export interface BudgetEstimationOptions {
+  protocolText: string;
+  visitSchedule?: any[];
+  targetEnrollment?: number;
+}
+
+export interface RiskAssessmentOptions {
+  protocolText: string;
+  studyMetadata?: any;
+}
+
+export interface ComplianceCheckOptions {
+  protocolText: string;
+  studyMetadata?: any;
+}
+
 /**
  * Analyze a clinical trial protocol using GPT-4o
  */
@@ -232,6 +248,237 @@ Guidelines:
     };
   } catch (error) {
     console.error('OpenAI visit schedule generation error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Estimate study budget based on protocol
+ */
+export async function estimateBudget(options: BudgetEstimationOptions) {
+  const { protocolText, visitSchedule, targetEnrollment } = options;
+
+  const visitScheduleText = visitSchedule
+    ? `\nVisit Schedule:\n${JSON.stringify(visitSchedule, null, 2)}`
+    : '';
+
+  const systemPrompt = `You are a clinical trial budget analyst specializing in cost estimation.
+Your task is to analyze protocols and provide realistic budget estimates based on industry standards.`;
+
+  const userPrompt = `Estimate the budget for the following clinical trial.
+
+Protocol Text:
+${protocolText.substring(0, 30000)} ${protocolText.length > 30000 ? '...(truncated)' : ''}
+${visitScheduleText}
+${targetEnrollment ? `Target Enrollment: ${targetEnrollment} participants` : ''}
+
+Provide a detailed budget estimate in the following JSON format:
+{
+  "totalEstimate": number (total estimated cost in USD),
+  "perParticipantCost": number (cost per participant),
+  "breakdown": {
+    "personnelCosts": number,
+    "procedureCosts": number,
+    "laboratoryTests": number,
+    "imaging": number,
+    "medicationCosts": number,
+    "participantCompensation": number,
+    "regulatoryFees": number,
+    "overheadIndirect": number,
+    "contingency": number
+  },
+  "assumptions": "List key assumptions made in this estimate",
+  "costDrivers": ["List of main cost drivers"],
+  "confidenceLevel": "low|medium|high"
+}
+
+Use industry-standard rates and consider:
+- Study phase and complexity
+- Number and type of procedures
+- Duration and frequency of visits
+- Geographic location (assume US rates)
+- Regulatory requirements`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.3,
+      max_tokens: 3000,
+      response_format: { type: 'json_object' },
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const result = JSON.parse(content);
+
+    return {
+      success: true,
+      data: result,
+      model: 'gpt-4o',
+      usage: completion.usage,
+    };
+  } catch (error) {
+    console.error('OpenAI budget estimation error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Perform risk assessment on protocol
+ */
+export async function assessRisk(options: RiskAssessmentOptions) {
+  const { protocolText, studyMetadata } = options;
+
+  const metadataText = studyMetadata
+    ? `\nStudy Metadata:\n${JSON.stringify(studyMetadata, null, 2)}`
+    : '';
+
+  const systemPrompt = `You are a clinical trial safety and risk assessment expert.
+Your task is to identify potential risks and safety concerns in clinical trial protocols.`;
+
+  const userPrompt = `Perform a comprehensive risk assessment for the following clinical trial.
+
+Protocol Text:
+${protocolText.substring(0, 40000)} ${protocolText.length > 40000 ? '...(truncated)' : ''}
+${metadataText}
+
+Provide a detailed risk assessment in the following JSON format:
+{
+  "overallRiskLevel": "low|medium|high|critical",
+  "riskScore": number (0-100, where 100 is highest risk),
+  "safetyRisks": [
+    {
+      "category": "patient_safety|data_integrity|regulatory|operational|financial",
+      "description": "detailed description of the risk",
+      "severity": "low|medium|high|critical",
+      "likelihood": "low|medium|high",
+      "mitigation": "recommended mitigation strategy",
+      "priority": number (1-10)
+    }
+  ],
+  "adverseEventPotential": "detailed analysis of AE potential",
+  "monitoringRecommendations": ["list of recommended monitoring measures"],
+  "criticalSuccessFactors": ["key factors for study success"]
+}
+
+Consider:
+- Patient population vulnerabilities
+- Intervention risks
+- Data collection complexity
+- Regulatory compliance challenges
+- Operational feasibility`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.2,
+      max_tokens: 4000,
+      response_format: { type: 'json_object' },
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const result = JSON.parse(content);
+
+    return {
+      success: true,
+      data: result,
+      model: 'gpt-4o',
+      usage: completion.usage,
+    };
+  } catch (error) {
+    console.error('OpenAI risk assessment error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check protocol compliance with regulations
+ */
+export async function checkCompliance(options: ComplianceCheckOptions) {
+  const { protocolText, studyMetadata } = options;
+
+  const metadataText = studyMetadata
+    ? `\nStudy Metadata:\n${JSON.stringify(studyMetadata, null, 2)}`
+    : '';
+
+  const systemPrompt = `You are a regulatory compliance expert specializing in FDA regulations and ICH-GCP guidelines.
+Your task is to review clinical trial protocols for compliance with key regulations.`;
+
+  const userPrompt = `Review the following protocol for regulatory compliance.
+
+Protocol Text:
+${protocolText.substring(0, 40000)} ${protocolText.length > 40000 ? '...(truncated)' : ''}
+${metadataText}
+
+Assess compliance with these regulations and provide results in JSON format:
+{
+  "complianceChecks": [
+    {
+      "regulation": "FDA_21CFR11|FDA_21CFR50|FDA_21CFR56|ICH_GCP_E6R2|HIPAA|GLP",
+      "section": "specific section/clause",
+      "status": "compliant|non_compliant|needs_review|not_applicable",
+      "finding": "detailed finding description",
+      "recommendation": "specific recommendation if non-compliant",
+      "severity": "low|medium|high|critical",
+      "citation": "regulation citation"
+    }
+  ],
+  "overallCompliance": "compliant|minor_issues|major_issues|non_compliant",
+  "complianceScore": number (0-100),
+  "criticalIssues": ["list of critical compliance issues"],
+  "recommendations": ["prioritized recommendations for compliance"]
+}
+
+Key regulations to check:
+- FDA 21 CFR Part 11 (Electronic Records)
+- FDA 21 CFR Part 50 (Informed Consent)
+- FDA 21 CFR Part 56 (IRB)
+- ICH-GCP E6(R2) (Good Clinical Practice)
+- HIPAA (Privacy)
+- Good Laboratory Practice (GLP)`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.2,
+      max_tokens: 5000,
+      response_format: { type: 'json_object' },
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const result = JSON.parse(content);
+
+    return {
+      success: true,
+      data: result,
+      model: 'gpt-4o',
+      usage: completion.usage,
+    };
+  } catch (error) {
+    console.error('OpenAI compliance check error:', error);
     throw error;
   }
 }

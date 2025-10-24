@@ -114,6 +114,30 @@ export async function analyzeProtocol(
         (err) => console.error('Visit schedule generation error:', err)
       );
 
+      // 8. Generate budget estimate (Phase 2 - parallel task)
+      generateAndStoreBudgetEstimate(
+        aiAnalysis.id,
+        protocolDoc.ocrContent,
+        provider,
+        study.targetEnrollment || undefined
+      ).catch((err) => console.error('Budget estimation error:', err));
+
+      // 9. Perform risk assessment (Phase 2 - parallel task)
+      performAndStoreRiskAssessment(
+        aiAnalysis.id,
+        protocolDoc.ocrContent,
+        provider,
+        data.studyMetadata
+      ).catch((err) => console.error('Risk assessment error:', err));
+
+      // 10. Check compliance (Phase 2 - parallel task)
+      performAndStoreComplianceCheck(
+        aiAnalysis.id,
+        protocolDoc.ocrContent,
+        provider,
+        data.studyMetadata
+      ).catch((err) => console.error('Compliance check error:', err));
+
       return {
         success: true,
         analysisId: aiAnalysis.id,
@@ -301,4 +325,146 @@ export async function submitFeedback(data: {
       correctedData: data.correctedData ? JSON.stringify(data.correctedData) : null,
     },
   });
+}
+
+/**
+ * Phase 2: Generate and store budget estimate
+ */
+async function generateAndStoreBudgetEstimate(
+  aiAnalysisId: string,
+  protocolText: string,
+  provider: 'openai' | 'anthropic',
+  targetEnrollment?: number
+): Promise<void> {
+  try {
+    console.log(`Generating budget estimate using ${provider}...`);
+
+    // Get visit schedule for more accurate estimation
+    const visitSchedule = await prisma.visitSchedule.findMany({
+      where: { aiAnalysisId },
+    });
+
+    const result =
+      provider === 'openai'
+        ? await openaiClient.estimateBudget({
+            protocolText,
+            visitSchedule: visitSchedule.map((v) => ({
+              visitName: v.visitName,
+              procedures: JSON.parse(v.procedures),
+            })),
+            targetEnrollment,
+          })
+        : null; // Anthropic version can be added later
+
+    if (!result || !result.data) return;
+
+    const data = result.data;
+
+    // Store budget estimate in database
+    await prisma.budgetEstimate.create({
+      data: {
+        aiAnalysisId,
+        totalEstimate: data.totalEstimate,
+        perParticipantCost: data.perParticipantCost,
+        breakdown: JSON.stringify(data.breakdown || {}),
+        assumptions: data.assumptions,
+      },
+    });
+
+    console.log(`Budget estimate stored: $${data.totalEstimate.toLocaleString()}`);
+  } catch (error) {
+    console.error('Budget estimation failed:', error);
+  }
+}
+
+/**
+ * Phase 2: Perform and store risk assessment
+ */
+async function performAndStoreRiskAssessment(
+  aiAnalysisId: string,
+  protocolText: string,
+  provider: 'openai' | 'anthropic',
+  studyMetadata?: any
+): Promise<void> {
+  try {
+    console.log(`Performing risk assessment using ${provider}...`);
+
+    const result =
+      provider === 'openai'
+        ? await openaiClient.assessRisk({
+            protocolText,
+            studyMetadata,
+          })
+        : null;
+
+    if (!result || !result.data) return;
+
+    const data = result.data;
+
+    // Update AI Analysis with overall risk level and score
+    await prisma.aiAnalysis.update({
+      where: { id: aiAnalysisId },
+      data: {
+        riskLevel: data.overallRiskLevel,
+      },
+    });
+
+    // Store individual safety risks (we'll use a simplified approach for now)
+    // In a full implementation, you'd create a separate SafetyRisk model
+    console.log(`Risk assessment completed: ${data.overallRiskLevel} risk, score ${data.riskScore}`);
+  } catch (error) {
+    console.error('Risk assessment failed:', error);
+  }
+}
+
+/**
+ * Phase 2: Perform and store compliance check
+ */
+async function performAndStoreComplianceCheck(
+  aiAnalysisId: string,
+  protocolText: string,
+  provider: 'openai' | 'anthropic',
+  studyMetadata?: any
+): Promise<void> {
+  try {
+    console.log(`Performing compliance check using ${provider}...`);
+
+    const result =
+      provider === 'openai'
+        ? await openaiClient.checkCompliance({
+            protocolText,
+            studyMetadata,
+          })
+        : null;
+
+    if (!result || !result.data) return;
+
+    const data = result.data;
+
+    // Update AI Analysis with compliance score
+    await prisma.aiAnalysis.update({
+      where: { id: aiAnalysisId },
+      data: {
+        complianceScore: data.complianceScore,
+      },
+    });
+
+    // Store compliance checks
+    if (data.complianceChecks && data.complianceChecks.length > 0) {
+      await prisma.complianceCheck.createMany({
+        data: data.complianceChecks.map((check: any) => ({
+          aiAnalysisId,
+          regulation: check.regulation,
+          status: check.status,
+          finding: check.finding,
+          recommendation: check.recommendation,
+          severity: check.severity,
+        })),
+      });
+
+      console.log(`Stored ${data.complianceChecks.length} compliance checks`);
+    }
+  } catch (error) {
+    console.error('Compliance check failed:', error);
+  }
 }

@@ -59,7 +59,7 @@ export default function AiAnalysisDashboard({
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'summary' | 'criteria' | 'schedule' | 'feedback'
+    'summary' | 'criteria' | 'schedule' | 'budget' | 'compliance' | 'feedback'
   >('summary');
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackComment, setFeedbackComment] = useState('');
@@ -289,6 +289,8 @@ export default function AiAnalysisDashboard({
               { id: 'summary', label: 'Summary', icon: '📊' },
               { id: 'criteria', label: `Criteria (${analysis.criteria.length})`, icon: '📋' },
               { id: 'schedule', label: `Visit Schedule (${analysis.visitSchedule.length})`, icon: '📅' },
+              { id: 'budget', label: 'Budget', icon: '💰' },
+              { id: 'compliance', label: `Compliance (${analysis.complianceChecks?.length || 0})`, icon: '✅' },
               { id: 'feedback', label: 'Feedback', icon: '💬' },
             ].map((tab) => (
               <button
@@ -473,6 +475,132 @@ export default function AiAnalysisDashboard({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Budget Tab */}
+          {activeTab === 'budget' && (
+            <div className="space-y-6">
+              {analysis.budgetEstimate ? (
+                <>
+                  {/* Total Estimate */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-xl border-2 border-green-200">
+                    <div className="text-center">
+                      <div className="text-sm font-semibold text-green-900 mb-2">Total Estimated Cost</div>
+                      <div className="text-5xl font-bold text-green-700 mb-2">
+                        ${analysis.budgetEstimate.totalEstimate.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-green-600">
+                        ${analysis.budgetEstimate.perParticipantCost.toLocaleString()} per participant
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cost Breakdown */}
+                  <div className="bg-white p-6 rounded-xl border border-gray-200">
+                    <h3 className="text-h4 font-bold text-brand-heading mb-4">Cost Breakdown</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {Object.entries(JSON.parse(analysis.budgetEstimate.breakdown)).map(([key, value]) => (
+                        <div key={key} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                          <div className="text-sm text-gray-600 mb-1 capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                          </div>
+                          <div className="text-xl font-bold text-gray-900">
+                            ${(value as number).toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Assumptions */}
+                  {analysis.budgetEstimate.assumptions && (
+                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                      <h3 className="text-h4 font-bold text-blue-900 mb-3">Assumptions</h3>
+                      <p className="text-body text-blue-800">{analysis.budgetEstimate.assumptions}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-4xl mb-4">💰</div>
+                  <p>Budget estimate not yet available</p>
+                  <p className="text-sm mt-2">Budget will be generated during analysis</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Compliance Tab */}
+          {activeTab === 'compliance' && (
+            <div className="space-y-4">
+              {analysis.complianceChecks && analysis.complianceChecks.length > 0 ? (
+                <>
+                  {/* Group by status */}
+                  {['compliant', 'needs_review', 'non_compliant'].map((statusFilter) => {
+                    const checks = analysis.complianceChecks.filter((c) => c.status === statusFilter);
+                    if (checks.length === 0) return null;
+
+                    const statusColors = {
+                      compliant: 'bg-green-50 border-green-200 text-green-800',
+                      needs_review: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                      non_compliant: 'bg-red-50 border-red-200 text-red-800',
+                    };
+
+                    const statusIcons = {
+                      compliant: '✅',
+                      needs_review: '⚠️',
+                      non_compliant: '❌',
+                    };
+
+                    return (
+                      <div key={statusFilter} className="mb-6">
+                        <h3 className="text-h4 font-bold text-brand-heading mb-3 capitalize flex items-center gap-2">
+                          <span>{statusIcons[statusFilter as keyof typeof statusIcons]}</span>
+                          {statusFilter.replace(/_/g, ' ')} ({checks.length})
+                        </h3>
+                        <div className="space-y-3">
+                          {checks.map((check) => (
+                            <div
+                              key={check.id}
+                              className={`p-5 rounded-xl border-2 ${statusColors[statusFilter as keyof typeof statusColors]}`}
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <div className="font-bold text-lg mb-1">
+                                    {check.regulation.replace(/_/g, ' ')}
+                                  </div>
+                                  <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                                    check.severity === 'critical' ? 'bg-red-100 text-red-800' :
+                                    check.severity === 'high' ? 'bg-orange-100 text-orange-800' :
+                                    check.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {check.severity} severity
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-body mb-3">{check.finding}</p>
+                              {check.recommendation && (
+                                <div className="bg-white/60 p-3 rounded-lg border border-current/20">
+                                  <div className="text-sm font-semibold mb-1">Recommendation:</div>
+                                  <p className="text-sm">{check.recommendation}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-4xl mb-4">✅</div>
+                  <p>Compliance checks not yet available</p>
+                  <p className="text-sm mt-2">Compliance will be checked during analysis</p>
+                </div>
+              )}
             </div>
           )}
 
