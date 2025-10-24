@@ -1,6 +1,15 @@
 import * as openaiClient from './openai-client';
 import * as anthropicClient from './anthropic-client';
 import { prisma } from '@/lib/prisma';
+import {
+  generateProtocolEmbedding,
+  updateAnalysisWithEmbedding,
+  storeSimilarityRelationships,
+} from './embeddings';
+import {
+  analyzeHistoricalMetrics,
+  generateBestPractices,
+} from './historical-analysis';
 
 export interface AnalyzeProtocolOptions {
   studyId: string;
@@ -138,6 +147,20 @@ export async function analyzeProtocol(
         data.studyMetadata
       ).catch((err) => console.error('Compliance check error:', err));
 
+      // 11. Generate embeddings and find similar protocols (Phase 3 - parallel task)
+      generateAndStoreEmbeddings(
+        aiAnalysis.id,
+        study.title,
+        data.executiveSummary,
+        data.studyMetadata
+      ).catch((err) => console.error('Embedding generation error:', err));
+
+      // 12. Analyze historical data and generate best practices (Phase 3 - parallel task)
+      analyzeHistoricalData(
+        study.id,
+        data.studyMetadata
+      ).catch((err) => console.error('Historical analysis error:', err));
+
       return {
         success: true,
         analysisId: aiAnalysis.id,
@@ -274,6 +297,23 @@ export async function getAnalysisResults(studyId: string) {
       complianceChecks: {
         orderBy: { severity: 'desc' },
       },
+      similarities: {
+        include: {
+          similarStudy: {
+            select: {
+              id: true,
+              title: true,
+              protocolNumber: true,
+              type: true,
+              status: true,
+              targetEnrollment: true,
+              startDate: true,
+              endDate: true,
+            },
+          },
+        },
+        orderBy: { similarityScore: 'desc' },
+      },
       userFeedback: {
         include: {
           user: {
@@ -300,6 +340,10 @@ export async function getAnalysisResults(studyId: string) {
     visitSchedule: analysis.visitSchedule.map((v) => ({
       ...v,
       procedures: JSON.parse(v.procedures),
+    })),
+    similarities: analysis.similarities.map((s) => ({
+      ...s,
+      matchingAspects: JSON.parse(s.matchingAspects),
     })),
   };
 }
@@ -466,5 +510,69 @@ async function performAndStoreComplianceCheck(
     }
   } catch (error) {
     console.error('Compliance check failed:', error);
+  }
+}
+
+/**
+ * Phase 3: Generate and store embeddings for similarity search
+ */
+async function generateAndStoreEmbeddings(
+  aiAnalysisId: string,
+  studyTitle: string,
+  executiveSummary: string,
+  studyMetadata: any
+): Promise<void> {
+  try {
+    console.log('Generating protocol embedding...');
+
+    const embedding = await generateProtocolEmbedding({
+      studyTitle,
+      executiveSummary,
+      studyMetadata,
+      therapeuticArea: studyMetadata?.therapeuticArea,
+      phase: studyMetadata?.phase,
+    });
+
+    // Store embedding
+    await updateAnalysisWithEmbedding(aiAnalysisId, embedding);
+
+    console.log('Embedding generated and stored');
+
+    // Find and store similar protocols
+    await storeSimilarityRelationships(aiAnalysisId);
+  } catch (error) {
+    console.error('Embedding generation failed:', error);
+  }
+}
+
+/**
+ * Phase 3: Analyze historical data and generate best practices
+ */
+async function analyzeHistoricalData(
+  studyId: string,
+  studyMetadata: any
+): Promise<void> {
+  try {
+    console.log('Analyzing historical data...');
+
+    const historicalAnalysis = await analyzeHistoricalMetrics(
+      studyId,
+      studyMetadata?.phase,
+      studyMetadata?.therapeuticArea
+    );
+
+    console.log(`Found ${historicalAnalysis.insights.length} historical insights`);
+
+    // Generate AI-powered best practices
+    if (historicalAnalysis.insights.length > 0) {
+      const bestPractices = await generateBestPractices(
+        studyMetadata,
+        historicalAnalysis.insights
+      );
+
+      console.log(`Generated ${bestPractices.length} best practice recommendations`);
+    }
+  } catch (error) {
+    console.error('Historical analysis failed:', error);
   }
 }

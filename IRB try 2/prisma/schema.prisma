@@ -381,6 +381,11 @@ model AiAnalysis {
   processingTimeMs Int?
   errorMessage     String?
 
+  // Phase 3: Protocol Similarity (Vector embeddings)
+  embedding        String? // JSON array of embedding vector (1536 dimensions for text-embedding-3-large)
+  embeddingModel   String? // text-embedding-3-large
+  embeddingCreated DateTime?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -500,4 +505,24 @@ model UserFeedback {
   @@index([userId])
   @@index([feedbackType])
   @@index([rating])
+}
+
+// Phase 3: Historical Data Analysis
+model HistoricalMetric {
+  id           String   @id @default(cuid())
+  studyId      String
+  metricType   String // enrollment_rate, dropout_rate, completion_time, budget_accuracy
+  metricValue  Float
+  timeframe    String // "2023-Q1", "2024-Jan", etc.
+  phase        String? // Phase I, II, III, IV
+  therapeuticArea String?
+  notes        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([studyId])
+  @@index([metricType])
+  @@index([timeframe])
+  @@index([phase])
+  @@index([therapeuticArea])
 }

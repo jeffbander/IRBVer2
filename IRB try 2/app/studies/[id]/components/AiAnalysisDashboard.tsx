@@ -31,6 +31,21 @@ interface AiAnalysisData {
     duration: string;
     notes: string;
   }>;
+  similarities?: Array<{
+    id: string;
+    similarityScore: number;
+    matchingAspects: any;
+    similarStudy: {
+      id: string;
+      title: string;
+      protocolNumber: string;
+      type: string;
+      status: string;
+      targetEnrollment: number;
+      startDate: string;
+      endDate: string;
+    };
+  }>;
   userFeedback: Array<{
     id: string;
     feedbackType: string;
@@ -59,7 +74,7 @@ export default function AiAnalysisDashboard({
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'summary' | 'criteria' | 'schedule' | 'budget' | 'compliance' | 'feedback'
+    'summary' | 'criteria' | 'schedule' | 'budget' | 'compliance' | 'similar' | 'feedback'
   >('summary');
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackComment, setFeedbackComment] = useState('');
@@ -291,6 +306,7 @@ export default function AiAnalysisDashboard({
               { id: 'schedule', label: `Visit Schedule (${analysis.visitSchedule.length})`, icon: '📅' },
               { id: 'budget', label: 'Budget', icon: '💰' },
               { id: 'compliance', label: `Compliance (${analysis.complianceChecks?.length || 0})`, icon: '✅' },
+              { id: 'similar', label: `Similar (${analysis.similarities?.length || 0})`, icon: '🔍' },
               { id: 'feedback', label: 'Feedback', icon: '💬' },
             ].map((tab) => (
               <button
@@ -599,6 +615,113 @@ export default function AiAnalysisDashboard({
                   <div className="text-4xl mb-4">✅</div>
                   <p>Compliance checks not yet available</p>
                   <p className="text-sm mt-2">Compliance will be checked during analysis</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Similar Protocols Tab */}
+          {activeTab === 'similar' && (
+            <div className="space-y-4">
+              {analysis.similarities && analysis.similarities.length > 0 ? (
+                <>
+                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl border-2 border-purple-200">
+                    <h3 className="text-h4 font-bold text-purple-900 mb-2">
+                      🔍 Similar Protocols Found
+                    </h3>
+                    <p className="text-body text-purple-800">
+                      Based on AI analysis, we found {analysis.similarities.length} protocols similar to this one.
+                      These similarities can help you learn from past experiences and best practices.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {analysis.similarities.map((similar) => (
+                      <div
+                        key={similar.id}
+                        className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-brand-primary hover:shadow-lg transition-all"
+                      >
+                        {/* Similarity Score Badge */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h4 className="text-lg font-bold text-brand-heading mb-1">
+                              {similar.similarStudy.title}
+                            </h4>
+                            <div className="text-sm text-gray-600">
+                              Protocol: {similar.similarStudy.protocolNumber}
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="bg-gradient-to-br from-green-100 to-emerald-100 px-4 py-2 rounded-full border-2 border-green-300">
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-green-700">
+                                  {(similar.similarityScore * 100).toFixed(0)}%
+                                </div>
+                                <div className="text-xs text-green-600">Match</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Study Details */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <div className="text-xs text-gray-500 mb-1">Type</div>
+                            <div className="text-sm font-semibold">{similar.similarStudy.type}</div>
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <div className="text-xs text-gray-500 mb-1">Status</div>
+                            <div className="text-sm font-semibold capitalize">{similar.similarStudy.status}</div>
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <div className="text-xs text-gray-500 mb-1">Enrollment</div>
+                            <div className="text-sm font-semibold">{similar.similarStudy.targetEnrollment}</div>
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <div className="text-xs text-gray-500 mb-1">Complexity</div>
+                            <div className="text-sm font-semibold">
+                              {similar.matchingAspects.complexityScore}/10
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Matching Aspects */}
+                        {similar.matchingAspects.riskLevel && (
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div className="text-xs font-semibold text-blue-900 mb-2">
+                              Similar Characteristics:
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                Risk: {similar.matchingAspects.riskLevel}
+                              </span>
+                              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                Type: {similar.matchingAspects.type}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Action Button */}
+                        <div className="mt-4">
+                          <a
+                            href={`/studies/${similar.similarStudy.id}`}
+                            className="inline-flex items-center text-sm font-semibold text-brand-primary hover:text-brand-accent transition-colors"
+                          >
+                            View Protocol Details →
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-4xl mb-4">🔍</div>
+                  <p>No similar protocols found yet</p>
+                  <p className="text-sm mt-2">
+                    Similarities will be identified after protocol analysis completes
+                  </p>
                 </div>
               )}
             </div>
