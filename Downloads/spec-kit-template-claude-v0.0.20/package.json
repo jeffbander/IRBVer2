@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Comprehensive research study management platform for clinical trials and academic research",
   "private": true,
+  "packageManager": "pnpm@10.18.3",
   "workspaces": [
     "packages/*",
     "services/*",
