@@ -20,3 +20,10 @@ coverage/
 *.iml
 .cache/
 build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Next.js
+.next/
+out/
