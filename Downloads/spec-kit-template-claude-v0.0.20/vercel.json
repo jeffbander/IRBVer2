@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd apps/researcher-portal && pnpm run build",
+  "outputDirectory": "apps/researcher-portal/.next",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "devCommand": "cd apps/researcher-portal && pnpm run dev"
+}
