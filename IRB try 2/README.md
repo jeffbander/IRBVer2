@@ -27,6 +27,21 @@ A modern, AI-powered Institutional Review Board (IRB) management system built fo
 - **Webhook Integration**: Automatic updates when analysis completes via ngrok tunnel
 - **Mock Mode**: Test locally without external API dependencies
 
+### 📅 QGenda-Inspired Scheduling (NEW!)
+- **Coordinator Availability Management**: Track recurring and one-time availability schedules
+- **Time Off Requests**: Full approval workflow for PTO, sick leave, and conferences
+- **Intelligent Slot Finder**: AI-powered scheduling recommendations considering:
+  - Coordinator workload balancing
+  - Time-off requests and conflicts
+  - Optimal time preferences (morning prioritization)
+  - Facility availability
+- **Visit Check-In/Check-Out**: Real-time visit tracking with automatic wait time calculation
+- **Facility Resource Management**: Book exam rooms, labs, and equipment
+- **On-Call Scheduling**: Manage coordinator on-call rotations with priority levels
+- **Waitlist Management**: Automatically fill cancellations from waitlist queue
+- **Analytics Dashboard**: Track utilization rates, no-show patterns, and completion metrics
+- **Mobile-Responsive Coordinator Dashboard**: Today's schedule at a glance
+
 ### 🎨 Mount Sinai Design System
 - **Official Branding**: Mount Sinai Health System colors and identity
   - Primary: #06ABEB (Vivid Cerulean)
@@ -246,6 +261,19 @@ Key models:
 - `GET /api/dashboard/stats` - Dashboard statistics
 - `GET /api/audit-logs` - Audit log entries
 
+#### Scheduling (QGenda Features)
+- `GET /api/scheduling/availability` - Get coordinator availability
+- `POST /api/scheduling/availability` - Set coordinator availability
+- `DELETE /api/scheduling/availability` - Remove availability
+- `GET /api/scheduling/time-off` - List time-off requests
+- `POST /api/scheduling/time-off` - Request time off
+- `PATCH /api/scheduling/time-off` - Approve/deny time-off request
+- `GET /api/scheduling/find-slots` - AI-powered optimal slot finder
+- `GET /api/scheduling/visits` - List scheduled visits
+- `POST /api/scheduling/visits` - Schedule a visit
+- `PATCH /api/scheduling/visits` - Update/reschedule/complete visit
+- `GET /api/scheduling/analytics` - Scheduling metrics and analytics
+
 ## Testing
 
 ### Running Tests
@@ -314,6 +342,8 @@ See [docs/AIGENTS_INTEGRATION.md](docs/AIGENTS_INTEGRATION.md) for details.
 ## Documentation
 
 - [Aigents Integration Guide](docs/AIGENTS_INTEGRATION.md) - Complete guide to AI-powered document analysis
+- [QGenda Implementation Plan](QGENDA_IMPLEMENTATION_PLAN.md) - Full 8-week scheduling feature roadmap
+- [Setup Complete Guide](SETUP_COMPLETE.md) - Comprehensive scheduling API usage and examples
 - [Validation Requirements](docs/VALIDATION_REQUIREMENTS.md) - Input validation rules
 - [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment instructions
 
@@ -375,7 +405,22 @@ For issues or questions:
 
 ## 🔄 Recent Updates
 
-### v2.0 - Mount Sinai Design System (Latest - October 2025)
+### v2.1 - QGenda Scheduling Integration (Latest - October 2025)
+- 📅 Implemented comprehensive QGenda-inspired scheduling system
+- 🤖 AI-powered intelligent slot finder with scoring algorithm
+- 👥 Coordinator availability and time-off management
+- ✅ Visit check-in/check-out workflow with wait time tracking
+- 📊 Scheduling analytics API (utilization, completion rates, trends)
+- 🏥 Facility and resource booking system
+- 📞 On-call rotation scheduling
+- 📋 Visit waitlist management
+- 🎯 Enhanced coordinator dashboard with today's schedule
+- 🔗 Figma MCP server integration for design-to-code workflow
+- 📚 Comprehensive documentation (80+ pages)
+- 🗄️ 8 new database models with 45+ fields
+- 🚀 12 new API endpoints
+
+### v2.0 - Mount Sinai Design System (October 2025)
 - ✨ Implemented official Mount Sinai Health System branding
 - 🎨 Created reusable UI component library (Button, Card, Input components)
 - 🔄 Redesigned dashboard with StatCards and Mount Sinai colors
@@ -395,8 +440,8 @@ For issues or questions:
 
 ---
 
-**Version**: 2.0.0
-**Last Updated**: October 13, 2025
+**Version**: 2.1.0
+**Last Updated**: October 27, 2025
 **License**: Proprietary - Mount Sinai Health System
 
 Built with ❤️ for Mount Sinai Health System | Powered by Next.js, TypeScript, and AI

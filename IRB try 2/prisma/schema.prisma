@@ -25,13 +25,19 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  studiesAsPI        Study[]            @relation("PrincipalInvestigator")
-  studiesAsReviewer  Study[]            @relation("Reviewer")
+  studiesAsPI        Study[]                  @relation("PrincipalInvestigator")
+  studiesAsReviewer  Study[]                  @relation("Reviewer")
   studyCoordinators  StudyCoordinator[]
-  enrollments        Enrollment[]       @relation("EnrolledBy")
-  documents          Document[]         @relation("UploadedBy")
+  enrollments        Enrollment[]             @relation("EnrolledBy")
+  documents          Document[]               @relation("UploadedBy")
   auditLogs          AuditLog[]
   aiAnalysisFeedback UserFeedback[]
+
+  // QGenda-inspired scheduling relations
+  availability       CoordinatorAvailability[]
+  timeOffRequests    TimeOffRequest[]
+  onCallSchedules    OnCallSchedule[]
+  assignedVisits     ParticipantVisit[]       @relation("VisitCoordinator")
 
   @@index([email])
   @@index([roleId])
@@ -131,6 +137,7 @@ model Participant {
 
   enrollments       Enrollment[]
   participantVisits ParticipantVisit[]
+  waitlist          VisitWaitlist[]
 
   @@unique([studyId, subjectId])
 }
@@ -337,6 +344,7 @@ model StudyVisit {
   updatedAt       DateTime @updatedAt
 
   participantVisits ParticipantVisit[]
+  waitlist          VisitWaitlist[]
 
   @@index([studyId])
   @@index([visitNumber])
@@ -356,13 +364,32 @@ model ParticipantVisit {
   paymentIssued Boolean     @default(false)
   paymentAmount Float?
   clinicalData  String? // JSON string for visit-specific clinical data
+
+  // QGenda-inspired scheduling enhancements
+  coordinatorId        String?
+  assignedCoordinator  User?              @relation("VisitCoordinator", fields: [coordinatorId], references: [id])
+  schedulingMethod     String?            @default("manual") // manual, auto, self_scheduled
+  schedulingScore      Float?             // AI confidence in schedule optimality
+  remindersSent        Int                @default(0)
+  lastReminderAt       DateTime?
+  checkInTime          DateTime?
+  checkOutTime         DateTime?
+  waitTime             Int?               // minutes
+  noShowReason         String?
+  rescheduledFrom      String?            // Previous visit ID
+  rescheduledTo        String?            // New visit ID
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
+  facilityBookings     FacilityBooking[]
+
   @@index([participantId])
   @@index([studyVisitId])
+  @@index([coordinatorId])
   @@index([status])
   @@index([scheduledDate])
+  @@index([schedulingMethod])
 }
 
 // AI-Powered Protocol Analysis Models
@@ -576,4 +603,168 @@ model CollaborationSession {
 
   @@unique([studyId])
   @@index([lastActivity])
+}
+
+// ============================================
+// QGenda-Inspired Scheduling Models
+// ============================================
+
+// Coordinator Availability Management
+model CoordinatorAvailability {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  coordinator   User     @relation(fields: [coordinatorId], references: [id], onDelete: Cascade)
+  dayOfWeek     Int      // 0-6 (Sunday-Saturday)
+  startTime     String   // "09:00"
+  endTime       String   // "17:00"
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isRecurring   Boolean  @default(true)
+  timezone      String   @default("America/New_York")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([coordinatorId])
+  @@index([dayOfWeek])
+  @@index([effectiveFrom])
+}
+
+// Time Off Request Management
+model TimeOffRequest {
+  id            String    @id @default(cuid())
+  coordinatorId String
+  coordinator   User      @relation(fields: [coordinatorId], references: [id], onDelete: Cascade)
+  startDate     DateTime
+  endDate       DateTime
+  requestType   String    // PTO, sick, personal, conference, etc.
+  status        String    @default("pending") // pending, approved, denied
+  reason        String?
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([coordinatorId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+// Facility Resource Management
+model Facility {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // exam_room, lab, office, conference_room
+  location    String
+  building    String?
+  floor       String?
+  capacity    Int      @default(1)
+  equipment   String?  // JSON array of available equipment
+  hoursOfOp   String?  // JSON object with operating hours
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings FacilityBooking[]
+
+  @@index([type])
+  @@index([active])
+  @@index([location])
+}
+
+model FacilityBooking {
+  id               String            @id @default(cuid())
+  facilityId       String
+  facility         Facility          @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  participantVisit String?
+  visit            ParticipantVisit? @relation(fields: [participantVisit], references: [id], onDelete: SetNull)
+  startTime        DateTime
+  endTime          DateTime
+  purpose          String
+  bookedBy         String
+  status           String            @default("booked") // booked, completed, cancelled
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([facilityId])
+  @@index([participantVisit])
+  @@index([startTime])
+  @@index([status])
+}
+
+// On-Call Schedule Management
+model OnCallSchedule {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  coordinator   User     @relation(fields: [coordinatorId], references: [id], onDelete: Cascade)
+  startDateTime DateTime
+  endDateTime   DateTime
+  scheduleType  String   // weekday, weekend, holiday, emergency
+  priority      Int      @default(1) // 1=primary, 2=backup, 3=tertiary
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([coordinatorId])
+  @@index([startDateTime])
+  @@index([scheduleType])
+  @@index([priority])
+}
+
+// Visit Waitlist Management
+model VisitWaitlist {
+  id            String      @id @default(cuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  studyVisitId  String
+  studyVisit    StudyVisit  @relation(fields: [studyVisitId], references: [id], onDelete: Cascade)
+  addedAt       DateTime    @default(now())
+  priority      Int         @default(5) // 1-10 (1=highest)
+  preferences   String?     // JSON object for time/day preferences
+  contacted     Boolean     @default(false)
+  contactedAt   DateTime?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([studyVisitId])
+  @@index([participantId])
+  @@index([priority])
+  @@index([contacted])
+  @@index([addedAt])
+}
+
+// Scheduling Analytics Cache
+model SchedulingMetric {
+  id               String    @id @default(cuid())
+  metricDate       DateTime
+  coordinatorId    String?
+  studyId          String?
+
+  // Visit Metrics
+  scheduledVisits  Int       @default(0)
+  completedVisits  Int       @default(0)
+  cancelledVisits  Int       @default(0)
+  noShowVisits     Int       @default(0)
+  rescheduledVisits Int      @default(0)
+
+  // Efficiency Metrics
+  utilizationRate  Float?    // 0.0 - 1.0
+  avgWaitTime      Float?    // minutes
+  avgVisitDuration Float?    // minutes
+  avgSchedulingTime Float?   // minutes to schedule
+
+  // Capacity Metrics
+  availableSlots   Int       @default(0)
+  bookedSlots      Int       @default(0)
+  capacityRate     Float?    // 0.0 - 1.0
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([metricDate, coordinatorId, studyId])
+  @@index([metricDate])
+  @@index([coordinatorId])
+  @@index([studyId])
 }

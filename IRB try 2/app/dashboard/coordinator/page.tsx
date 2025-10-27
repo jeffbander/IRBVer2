@@ -27,6 +27,26 @@ interface EnrollmentStats {
   enrolledByCoordinator: number;
 }
 
+interface Visit {
+  id: string;
+  scheduledDate: string;
+  status: string;
+  participant: {
+    participantId: string;
+    firstName: string;
+    lastName: string;
+    study: {
+      title: string;
+      protocolNumber: string;
+    };
+  };
+  studyVisit: {
+    visitName: string;
+    visitNumber: number;
+    visitType: string;
+  };
+}
+
 export default function CoordinatorDashboard() {
   const router = useRouter();
   const { token, user } = useAuthStore();
@@ -37,6 +57,8 @@ export default function CoordinatorDashboard() {
     enrolledThisMonth: 0,
     enrolledByCoordinator: 0,
   });
+  const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
+  const [upcomingVisits, setUpcomingVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,6 +74,7 @@ export default function CoordinatorDashboard() {
     }
 
     fetchAssignedStudies();
+    fetchSchedule();
   }, [token, user, router]);
 
   const fetchAssignedStudies = async () => {
@@ -88,6 +111,95 @@ export default function CoordinatorDashboard() {
       console.error('Error fetching assigned studies:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSchedule = async () => {
+    if (!token || !user) return;
+
+    try {
+      // Get today's date range
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Get next 7 days range
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+
+      // Fetch today's visits
+      const todayResponse = await fetch(
+        `/api/scheduling/visits?coordinatorId=${user.id}&startDate=${today.toISOString()}&endDate=${tomorrow.toISOString()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (todayResponse.ok) {
+        const data = await todayResponse.json();
+        setTodayVisits(data);
+      }
+
+      // Fetch upcoming visits (next 7 days)
+      const upcomingResponse = await fetch(
+        `/api/scheduling/visits?coordinatorId=${user.id}&startDate=${tomorrow.toISOString()}&endDate=${nextWeek.toISOString()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (upcomingResponse.ok) {
+        const data = await upcomingResponse.json();
+        setUpcomingVisits(data);
+      }
+    } catch (error) {
+      console.error('Error fetching schedule:', error);
+    }
+  };
+
+  const handleCheckIn = async (visitId: string) => {
+    try {
+      const response = await fetch('/api/scheduling/visits', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: visitId,
+          checkInTime: new Date().toISOString(),
+        }),
+      });
+
+      if (response.ok) {
+        fetchSchedule();
+      }
+    } catch (error) {
+      console.error('Error checking in:', error);
+    }
+  };
+
+  const handleCheckOut = async (visitId: string) => {
+    try {
+      const response = await fetch('/api/scheduling/visits', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: visitId,
+          checkOutTime: new Date().toISOString(),
+          status: 'completed',
+        }),
+      });
+
+      if (response.ok) {
+        fetchSchedule();
+      }
+    } catch (error) {
+      console.error('Error checking out:', error);
     }
   };
 
@@ -146,7 +258,34 @@ export default function CoordinatorDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Today's Visits
+                </p>
+                <p className="text-3xl font-bold text-blue-600 mt-2">
+                  {todayVisits.length}
+                </p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-full">
+                <svg
+                  className="w-8 h-8 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -231,6 +370,59 @@ export default function CoordinatorDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Today's Schedule */}
+        {todayVisits.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Today's Schedule</h2>
+            <div className="space-y-4">
+              {todayVisits.map((visit) => (
+                <div
+                  key={visit.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
+                          {new Date(visit.scheduledDate).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {visit.participant.firstName} {visit.participant.lastName}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">
+                        <span className="font-medium">Study:</span>{' '}
+                        {visit.participant.study.title}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Visit:</span>{' '}
+                        {visit.studyVisit.visitName} (Visit #{visit.studyVisit.visitNumber})
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleCheckIn(visit.id)}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm font-medium"
+                      >
+                        Check In
+                      </button>
+                      <button
+                        onClick={() => handleCheckOut(visit.id)}
+                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm font-medium"
+                      >
+                        Complete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Assigned Studies Table */}
         <div className="bg-white rounded-lg shadow-sm">
