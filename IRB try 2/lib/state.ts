@@ -16,7 +16,7 @@ interface User {
   role: {
     id: string;
     name: string;
-    permissions: string[];
+    permissions: Record<string, boolean> | string[];
   };
 }
 

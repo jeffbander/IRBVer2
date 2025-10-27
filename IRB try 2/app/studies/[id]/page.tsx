@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/lib/state';
+import { hasPermission } from '@/lib/permissions-helper';
 import DocumentsList from './components/DocumentsList';
 import { UploadProgress } from './components/UploadProgress';
 import AiAnalysisDashboard from './components/AiAnalysisDashboard';
@@ -325,8 +326,8 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   }
 
   const isPI = study.principalInvestigator.id === user?.id;
-  const isReviewer = user?.role?.permissions?.includes('review_studies') ?? false;
-  const canApprove = user?.role?.permissions?.includes('approve_studies');
+  const isReviewer = hasPermission(user?.role?.permissions, 'review_studies');
+  const canApprove = hasPermission(user?.role?.permissions, 'approve_studies');
   const isAdmin = user?.role?.name === 'admin';
 
   return (

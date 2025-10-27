@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/state';
+import { hasPermission } from '@/lib/permissions-helper';
 
 interface User {
   id: string;
@@ -41,7 +42,7 @@ export default function UsersPage() {
     }
 
     // Check if user has permission to manage users
-    if (!user.role?.permissions?.includes('manage_users')) {
+    if (!hasPermission(user.role?.permissions, 'manage_users')) {
       router.push('/dashboard');
       return;
     }
@@ -296,9 +297,11 @@ export default function UsersPage() {
                   onChange={(e) => setFormData({ ...formData, roleName: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003F6C] focus:border-transparent"
                 >
-                  <option value="researcher">Researcher</option>
-                  <option value="reviewer">Reviewer</option>
                   <option value="admin">Admin</option>
+                  <option value="principal_investigator">Principal Investigator</option>
+                  <option value="coordinator">Coordinator</option>
+                  <option value="reviewer">Reviewer</option>
+                  <option value="researcher">Researcher</option>
                 </select>
               </div>
             </div>

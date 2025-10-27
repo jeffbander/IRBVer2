@@ -190,7 +190,7 @@ export default function UserDetailsPage({ params }: { params: { id: string } }) 
     }
   };
 
-  const canManageUsers = currentUser?.role?.permissions?.includes('manage_users');
+  const canManageUsers = hasPermission(currentUser?.role?.permissions, 'manage_users');
 
   if (loading) {
     return (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/middleware';
+import { hasPermission } from '@/lib/permissions-helper';
 import { rateLimiters } from '@/lib/rate-limit';
 import { cors, handlePreflight } from '@/lib/cors';
 import bcrypt from 'bcryptjs';
@@ -41,9 +42,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const permissions = currentUser.role.permissions as string[];
+    const permissions = currentUser.role.permissions;
     const isResearcher = currentUser.role.name === 'researcher';
-    const isAdmin = permissions.includes('manage_users') || currentUser.role.name === 'admin';
+    const isAdmin = hasPermission(permissions, 'manage_users') || currentUser.role.name === 'admin';
 
     // Only researchers and admins can create coordinators
     if (!isResearcher && !isAdmin) {

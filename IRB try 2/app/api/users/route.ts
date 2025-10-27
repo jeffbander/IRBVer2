@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { hasPermission } from '@/lib/middleware';
 import bcrypt from 'bcryptjs';
 
 // GET - List all users
@@ -12,9 +13,9 @@ export async function GET(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    const permissions = user.role.permissions as string[];
+    const permissions = user.role.permissions;
 
-    if (!permissions.includes('manage_users')) {
+    if (!hasPermission(permissions, 'manage_users')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -54,9 +55,9 @@ export async function POST(request: NextRequest) {
     }
 
     const currentUser = verifyToken(token);
-    const permissions = currentUser.role.permissions as string[];
+    const permissions = currentUser.role.permissions;
 
-    if (!permissions.includes('manage_users')) {
+    if (!hasPermission(permissions, 'manage_users')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -94,7 +95,9 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         firstName,
         lastName,
-        roleId: role.id
+        roleId: role.id,
+        approved: true,  // Auto-approve users created by admin
+        active: true
       },
       select: {
         id: true,
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
         action: 'CREATE_USER',
         entity: 'User',
         entityId: newUser.id,
-        details: {
+        metadata: {
           newUserEmail: newUser.email,
           role: roleName
         }

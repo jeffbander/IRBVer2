@@ -68,7 +68,7 @@ export async function POST(
           }
         }
 
-        if (!Array.isArray(permissions) || !permissions.includes('approve_studies')) {
+        if (!Array.isArray(permissions) || !hasPermission(permissions, 'approve_studies')) {
           console.log('Permission check failed:', { permissions, hasApprove: permissions?.includes?.('approve_studies') });
           return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
         }
@@ -104,7 +104,16 @@ export async function POST(
 
       case 'reject':
         // Only reviewers can reject
-        if (!user.role.permissions.includes('approve_studies')) {
+        let rejectPermissions = user.role.permissions;
+        if (typeof rejectPermissions === 'string') {
+          try {
+            rejectPermissions = JSON.parse(rejectPermissions);
+          } catch {
+            rejectPermissions = [];
+          }
+        }
+
+        if (!Array.isArray(rejectPermissions) || !hasPermission(rejectPermissions, 'approve_studies')) {
           return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
         }
 
@@ -137,7 +146,16 @@ export async function POST(
 
       case 'request_changes':
         // Only reviewers can request changes
-        if (!user.role.permissions.includes('review_studies')) {
+        let requestChangesPermissions = user.role.permissions;
+        if (typeof requestChangesPermissions === 'string') {
+          try {
+            requestChangesPermissions = JSON.parse(requestChangesPermissions);
+          } catch {
+            requestChangesPermissions = [];
+          }
+        }
+
+        if (!Array.isArray(requestChangesPermissions) || !hasPermission(requestChangesPermissions, 'review_studies')) {
           return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
         }
 

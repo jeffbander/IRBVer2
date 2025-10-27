@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
         } else if (user.role.name === 'reviewer') {
           where.OR = [
             { reviewerId: user.userId },
-            { status: 'PENDING_REVIEW' }
+            { status: 'PENDING_REVIEW' },
+            { status: 'DRAFT' }  // Reviewers can see draft studies
           ];
         } else if (user.role.name === 'coordinator') {
           // Coordinators only see assigned studies

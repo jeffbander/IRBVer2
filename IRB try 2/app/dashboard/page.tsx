@@ -83,8 +83,19 @@ export default function Dashboard() {
   ];
 
   const hasPermission = (permission: string) => {
-    const permissions = user.role.permissions as string[];
-    return permissions.includes(permission);
+    const permissions = user.role.permissions;
+
+    // Handle permissions as object (e.g., {canManageUsers: true})
+    if (typeof permissions === 'object' && !Array.isArray(permissions)) {
+      return permissions[permission] === true;
+    }
+
+    // Fallback for array format (legacy)
+    if (Array.isArray(permissions)) {
+      return permissions.includes(permission);
+    }
+
+    return false;
   };
 
   return (

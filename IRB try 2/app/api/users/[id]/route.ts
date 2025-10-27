@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { hasPermission } from '@/lib/middleware';
 
 // GET single user
 export async function GET(
@@ -48,9 +49,9 @@ export async function PUT(
     }
 
     const user = verifyToken(token);
-    const permissions = user.role.permissions as string[];
+    const permissions = user.role.permissions;
 
-    if (!permissions.includes('manage_users')) {
+    if (!hasPermission(permissions, 'manage_users')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -107,9 +108,9 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    const permissions = user.role.permissions as string[];
+    const permissions = user.role.permissions;
 
-    if (!permissions.includes('manage_users')) {
+    if (!hasPermission(permissions, 'manage_users')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

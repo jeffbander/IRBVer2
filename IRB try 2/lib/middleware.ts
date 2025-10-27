@@ -22,14 +22,34 @@ export function authenticateRequest(request: NextRequest): TokenPayload {
   }
 }
 
+/**
+ * Check if permissions object/array has a specific permission
+ * Handles both object format {permission: true} and array format [permission, ...]
+ */
+export function hasPermission(permissions: any, permission: string): boolean {
+  if (!permissions) return false;
+
+  // Handle object format (e.g., {view_studies: true})
+  if (typeof permissions === 'object' && !Array.isArray(permissions)) {
+    return permissions[permission] === true;
+  }
+
+  // Handle array format (legacy)
+  if (Array.isArray(permissions)) {
+    return permissions.includes(permission);
+  }
+
+  return false;
+}
+
 // Check if user has required permission(s)
 export function checkPermission(user: TokenPayload, required: string | string[]): void {
-  const permissions = user.role.permissions as string[];
+  const permissions = user.role.permissions;
   const requiredPerms = Array.isArray(required) ? required : [required];
 
-  const hasPermission = requiredPerms.some(perm => permissions.includes(perm));
+  const hasRequiredPermission = requiredPerms.some(perm => hasPermission(permissions, perm));
 
-  if (!hasPermission) {
+  if (!hasRequiredPermission) {
     throw new AuthorizationError();
   }
 }
@@ -40,14 +60,14 @@ export function checkOwnership(
   resourceOwnerId: string,
   allowedPermission?: string
 ): void {
-  const permissions = user.role.permissions as string[];
+  const permissions = user.role.permissions as Record<string, boolean>;
 
   // Allow if user is owner or has special permission
   if (user.userId === resourceOwnerId) {
     return;
   }
 
-  if (allowedPermission && permissions.includes(allowedPermission)) {
+  if (allowedPermission && permissions[allowedPermission] === true) {
     return;
   }
 

@@ -66,7 +66,7 @@ export async function DELETE(
     }
 
     const permissions = userWithRole.role.permissions as string[];
-    const canDelete = permissions.includes('delete_documents');
+    const canDelete = hasPermission(permissions, 'delete_documents');
 
     if (!canDelete) {
       return NextResponse.json(
@@ -135,7 +135,7 @@ export async function PATCH(
     const user = verifyToken(token);
     const permissions = user.role.permissions as string[];
 
-    if (!permissions.includes('manage_documents')) {
+    if (!hasPermission(permissions, 'manage_documents')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

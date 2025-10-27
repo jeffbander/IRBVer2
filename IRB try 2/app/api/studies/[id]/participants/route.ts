@@ -42,7 +42,7 @@ export async function POST(
     const user = verifyToken(token);
     const permissions = user.role.permissions as string[];
 
-    if (!permissions.includes('manage_participants')) {
+    if (!hasPermission(permissions, 'manage_participants')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

@@ -140,7 +140,24 @@ export default function StudiesPage() {
     ? filteredStudies.filter(s => s.status === 'PENDING_REVIEW')
     : filteredStudies;
 
-  const isReviewer = user?.role?.permissions?.includes('review_studies');
+  const hasPermission = (permission: string) => {
+    if (!user?.role?.permissions) return false;
+    const permissions = user.role.permissions;
+
+    // Handle permissions as object (e.g., {review_studies: true})
+    if (typeof permissions === 'object' && !Array.isArray(permissions)) {
+      return permissions[permission] === true;
+    }
+
+    // Handle permissions as array (legacy)
+    if (Array.isArray(permissions)) {
+      return permissions.includes(permission);
+    }
+
+    return false;
+  };
+
+  const isReviewer = hasPermission('review_studies');
 
   if (loading) {
     return (

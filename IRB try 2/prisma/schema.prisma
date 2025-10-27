@@ -509,14 +509,14 @@ model UserFeedback {
 
 // Phase 3: Historical Data Analysis
 model HistoricalMetric {
-  id           String   @id @default(cuid())
-  studyId      String
-  metricType   String // enrollment_rate, dropout_rate, completion_time, budget_accuracy
-  metricValue  Float
-  timeframe    String // "2023-Q1", "2024-Jan", etc.
-  phase        String? // Phase I, II, III, IV
+  id              String  @id @default(cuid())
+  studyId         String
+  metricType      String // enrollment_rate, dropout_rate, completion_time, budget_accuracy
+  metricValue     Float
+  timeframe       String // "2023-Q1", "2024-Jan", etc.
+  phase           String? // Phase I, II, III, IV
   therapeuticArea String?
-  notes        String?
+  notes           String?
 
   createdAt DateTime @default(now())
 
@@ -529,12 +529,12 @@ model HistoricalMetric {
 
 // Phase 4: Real-time Collaboration
 model ProtocolComment {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   studyId      String
   userId       String
   section      String // Which section/field this comment refers to
   content      String
-  resolved     Boolean  @default(false)
+  resolved     Boolean   @default(false)
   resolvedById String?
   resolvedAt   DateTime?
 
@@ -548,7 +548,7 @@ model ProtocolComment {
 }
 
 model ProtocolVersion {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   studyId         String
   versionNumber   Int
   changes         String // JSON string of changes
@@ -566,10 +566,10 @@ model ProtocolVersion {
 }
 
 model CollaborationSession {
-  id              String   @id @default(cuid())
-  studyId         String
-  activeUsers     String // JSON array of user IDs currently viewing/editing
-  lastActivity    DateTime @default(now())
+  id           String   @id @default(cuid())
+  studyId      String
+  activeUsers  String // JSON array of user IDs currently viewing/editing
+  lastActivity DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

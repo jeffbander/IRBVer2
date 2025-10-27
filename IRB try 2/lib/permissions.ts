@@ -5,6 +5,26 @@ import { prisma } from '@/lib/prisma';
  */
 
 /**
+ * Helper function to check if a permission exists in user's permissions
+ * Handles both object format {permission: true} and array format [permission, ...]
+ */
+function hasPermission(permissions: any, permission: string): boolean {
+  if (!permissions) return false;
+
+  // Handle object format (e.g., {view_studies: true})
+  if (typeof permissions === 'object' && !Array.isArray(permissions)) {
+    return permissions[permission] === true;
+  }
+
+  // Handle array format (legacy)
+  if (Array.isArray(permissions)) {
+    return permissions.includes(permission);
+  }
+
+  return false;
+}
+
+/**
  * Check if a user can view a specific study
  * - Admin: can view all studies
  * - Reviewer: can view studies assigned to them
@@ -253,10 +273,10 @@ export async function canManageCoordinators(
       return false;
     }
 
-    const permissions = user.role.permissions as string[];
+    const permissions = user.role.permissions;
 
     // Admins can manage all coordinators
-    if (permissions.includes('manage_users') || user.role.name === 'admin') {
+    if (hasPermission(permissions, 'manage_users') || user.role.name === 'admin') {
       return true;
     }
 
@@ -296,10 +316,10 @@ export async function canEnrollPatient(
       return false;
     }
 
-    const permissions = user.role.permissions as string[];
+    const permissions = user.role.permissions;
 
     // Must have enroll_participants permission
-    if (!permissions.includes('enroll_participants')) {
+    if (!hasPermission(permissions, 'enroll_participants')) {
       return false;
     }
 

@@ -10,7 +10,7 @@ interface User {
   role: {
     id: string;
     name: string;
-    permissions: string[];
+    permissions: Record<string, boolean> | string[];
   };
 }
 
@@ -112,11 +112,23 @@ export function useAuth() {
 
       const permissions = user.role.permissions;
 
-      if (Array.isArray(permission)) {
-        return permission.some((perm) => permissions.includes(perm));
+      // Handle permissions as object (e.g., {canManageUsers: true})
+      if (typeof permissions === 'object' && !Array.isArray(permissions)) {
+        if (Array.isArray(permission)) {
+          return permission.some((perm) => permissions[perm] === true);
+        }
+        return permissions[permission] === true;
       }
 
-      return permissions.includes(permission);
+      // Fallback for array format (legacy)
+      if (Array.isArray(permissions)) {
+        if (Array.isArray(permission)) {
+          return permission.some((perm) => permissions.includes(perm));
+        }
+        return permissions.includes(permission);
+      }
+
+      return false;
     },
     [user]
   );
