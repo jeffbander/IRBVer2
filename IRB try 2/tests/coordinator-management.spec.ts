@@ -216,8 +216,8 @@ test.describe('Coordinator Management - Permission Tests', () => {
 
     // Login as coordinator
     await page.goto('/');
-    await page.fill('input[name="email"]', 'coordinator@test.com');
-    await page.fill('input[name="password"]', 'test123');
+    await page.fill('input[name="email"]', 'coordinator1@test.com');
+    await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
     // Navigate to a study (if coordinator has access)
@@ -238,8 +238,8 @@ test.describe('Coordinator Management - Permission Tests', () => {
   test('coordinator cannot directly access coordinator management URL', async ({ page }) => {
     // Login as coordinator
     await page.goto('/');
-    await page.fill('input[name="email"]', 'coordinator@test.com');
-    await page.fill('input[name="password"]', 'test123');
+    await page.fill('input[name="email"]', 'coordinator1@test.com');
+    await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
     // Try to access coordinator management page directly

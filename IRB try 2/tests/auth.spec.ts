@@ -6,18 +6,21 @@ test.describe('Authentication', () => {
   });
 
   test('should show login page', async ({ page }) => {
+    // Wait for redirect to /login
+    await page.waitForURL('/login', { timeout: 10000 });
     await expect(page).toHaveURL('/login');
-    await expect(page.locator('h1')).toContainText('IRB System');
+    await expect(page.locator('h1')).toContainText('Mount Sinai');
   });
 
   test('should login with valid credentials', async ({ page }) => {
     await page.goto('/login');
 
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
     // Should redirect to dashboard
+    await page.waitForURL('/dashboard', { timeout: 10000 });
     await expect(page).toHaveURL('/dashboard');
   });
 
@@ -44,16 +47,18 @@ test.describe('Authentication', () => {
   test('should logout successfully', async ({ page }) => {
     // Login first
     await page.goto('/login');
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
+    await page.waitForURL('/dashboard', { timeout: 10000 });
     await expect(page).toHaveURL('/dashboard');
 
     // Logout - click the logout icon (svg button)
     await page.click('button:has(svg path[d*="M17 16l4-4"])');
 
     // Should redirect to login
+    await page.waitForURL('/login', { timeout: 10000 });
     await expect(page).toHaveURL('/login');
   });
 });

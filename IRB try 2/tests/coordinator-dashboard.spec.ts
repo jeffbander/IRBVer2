@@ -3,13 +3,13 @@ import { test, expect } from '@playwright/test';
 test.describe('Coordinator Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     // Login as coordinator
-    await page.goto('/');
-    await page.fill('input[name="email"]', 'coordinator@test.com');
-    await page.fill('input[name="password"]', 'test123');
+    await page.goto('/login');
+    await page.fill('input[name="email"]', 'coordinator1@test.com');
+    await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
     // Wait for redirect to coordinator dashboard
-    await page.waitForURL('/dashboard/coordinator');
+    await page.waitForURL('/dashboard/coordinator', { timeout: 30000 });
   });
 
   test('coordinator is automatically redirected to specialized dashboard', async ({ page }) => {
@@ -225,8 +225,8 @@ test.describe('Coordinator Dashboard - Navigation', () => {
   test('coordinator accessing /dashboard is redirected to /dashboard/coordinator', async ({ page }) => {
     // Login as coordinator
     await page.goto('/');
-    await page.fill('input[name="email"]', 'coordinator@test.com');
-    await page.fill('input[name="password"]', 'test123');
+    await page.fill('input[name="email"]', 'coordinator1@test.com');
+    await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
     // Try to navigate to general dashboard
@@ -257,8 +257,8 @@ test.describe('Coordinator Dashboard - Access Control', () => {
   test('coordinator only sees studies they are assigned to', async ({ page }) => {
     // Login as coordinator
     await page.goto('/');
-    await page.fill('input[name="email"]', 'coordinator@test.com');
-    await page.fill('input[name="password"]', 'test123');
+    await page.fill('input[name="email"]', 'coordinator1@test.com');
+    await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
     // Get study IDs from dashboard
@@ -293,8 +293,8 @@ test.describe('Coordinator Dashboard - Access Control', () => {
   test('coordinator cannot access unassigned study directly', async ({ page }) => {
     // Login as coordinator
     await page.goto('/');
-    await page.fill('input[name="email"]', 'coordinator@test.com');
-    await page.fill('input[name="password"]', 'test123');
+    await page.fill('input[name="email"]', 'coordinator1@test.com');
+    await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
     // Try to access a study URL directly (use a fake ID or known unassigned study)
