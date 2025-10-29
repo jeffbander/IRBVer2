@@ -17,14 +17,14 @@ export async function OPTIONS(request: NextRequest) {
 
 /**
  * POST /api/coordinators
- * Allows researchers to create new coordinator accounts
+ * Allows researchers, PIs, and admins to create new coordinator accounts
  *
- * This endpoint enables researchers to create coordinators without needing admin privileges.
+ * This endpoint enables researchers and principal investigators to create coordinators.
  * The newly created coordinator will have the 'coordinator' role and can be assigned to studies.
  */
 export async function POST(request: NextRequest) {
   try {
-    const rateLimited = await rateLimiters.modify(request);
+    const rateLimited = await rateLimiters.write(request);
     if (rateLimited) return rateLimited;
 
     const user = authenticateRequest(request);
@@ -44,14 +44,15 @@ export async function POST(request: NextRequest) {
 
     const permissions = currentUser.role.permissions;
     const isResearcher = currentUser.role.name === 'researcher';
+    const isPI = currentUser.role.name === 'principal_investigator';
     const isAdmin = hasPermission(permissions, 'manage_users') || currentUser.role.name === 'admin';
 
-    // Only researchers and admins can create coordinators
-    if (!isResearcher && !isAdmin) {
+    // Only researchers, PIs, and admins can create coordinators
+    if (!isResearcher && !isPI && !isAdmin) {
       return cors(
         request,
         NextResponse.json(
-          { error: 'Only researchers and admins can create coordinators' },
+          { error: 'Only researchers, principal investigators, and admins can create coordinators' },
           { status: 403 }
         )
       );
@@ -126,33 +127,53 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create coordinator user
-    const newCoordinator = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        roleId: coordinatorRole.id,
-        active: true,
-        approved: true, // Auto-approve coordinators created by researchers
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        active: true,
-        approved: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        createdAt: true,
-      },
+    // Log data being sent to Prisma for debugging
+    console.log('Creating coordinator with data:', {
+      email,
+      firstName,
+      lastName,
+      roleId: coordinatorRole.id,
+      active: true,
+      approved: true,
     });
+
+    // Create coordinator user
+    let newCoordinator;
+    try {
+      newCoordinator = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          firstName,
+          lastName,
+          roleId: coordinatorRole.id,
+          active: true,
+          approved: true, // Auto-approve coordinators created by researchers
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          active: true,
+          approved: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          createdAt: true,
+        },
+      });
+    } catch (prismaError: any) {
+      console.error('Prisma validation error details:', {
+        message: prismaError.message,
+        meta: prismaError.meta,
+        code: prismaError.code,
+      });
+      throw prismaError;
+    }
 
     // Create audit log
     await prisma.auditLog.create({
@@ -161,7 +182,7 @@ export async function POST(request: NextRequest) {
         action: 'CREATE_COORDINATOR',
         entity: 'User',
         entityId: newCoordinator.id,
-        details: {
+        metadata: {
           coordinatorEmail: newCoordinator.email,
           coordinatorName: `${newCoordinator.firstName} ${newCoordinator.lastName}`,
           createdBy: user.userId,
