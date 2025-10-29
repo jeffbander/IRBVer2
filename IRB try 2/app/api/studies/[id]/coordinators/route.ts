@@ -101,7 +101,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const rateLimited = await rateLimiters.modify(request);
+    const rateLimited = await rateLimiters.write(request);
     if (rateLimited) return rateLimited;
 
     const user = authenticateRequest(request);
