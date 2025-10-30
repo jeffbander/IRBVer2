@@ -12,7 +12,7 @@ test.describe('Participant Enrollment - Simplified Tests', () => {
     // Login via API to get token (server is already warmed up by global setup)
     const loginResponse = await request.post(`${BASE_URL}/api/auth?action=login`, {
       data: {
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123'
       }
     });
@@ -58,7 +58,7 @@ test.describe('Participant Enrollment - Simplified Tests', () => {
   test('Should enroll participant through UI', async ({ page }) => {
     // Login through UI to properly initialize Zustand state
     await page.goto(`${BASE_URL}/login`);
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
@@ -101,7 +101,7 @@ test.describe('Participant Enrollment - Simplified Tests', () => {
   test('Should prevent duplicate enrollment through UI', async ({ page }) => {
     // Login through UI
     await page.goto(`${BASE_URL}/login`);
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'admin123');
     await page.click('button[type="submit"]');
     await page.waitForURL('**/dashboard', { timeout: 15000 });

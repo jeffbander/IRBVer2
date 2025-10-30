@@ -13,7 +13,7 @@ test.describe('Study Approval → Document Upload → Aigents', () => {
         'Content-Type': 'application/json',
       },
       data: {
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123',
       },
     });
@@ -73,7 +73,7 @@ test.describe('Study Approval → Document Upload → Aigents', () => {
 
     // Re-seed to get updated admin permissions
     await request.post('/api/auth?action=login', {
-      data: { email: 'admin@example.com', password: 'admin123' }
+      data: { email: 'admin@test.com', password: 'admin123' }
     }).then(async (res) => {
       const newLoginData = await res.json();
       // Use fresh token with updated permissions

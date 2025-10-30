@@ -10,7 +10,7 @@ test.describe('Participant Enrollment Tests', () => {
     // Login and get auth token
     const loginResponse = await request.post(`${BASE_URL}/api/auth?action=login`, {
       data: {
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123'
       }
     });
@@ -43,7 +43,7 @@ test.describe('Participant Enrollment Tests', () => {
     await page.waitForLoadState('networkidle');
 
     // Login
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
 
     // Wait for form to be ready and submit
@@ -69,7 +69,7 @@ test.describe('Participant Enrollment Tests', () => {
     await page.waitForLoadState('networkidle');
 
     // Login
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.waitForTimeout(1000);
     await page.click('button[type="submit"]');
@@ -139,7 +139,7 @@ test.describe('Participant Enrollment Tests', () => {
     await page.waitForLoadState('networkidle');
 
     // Login
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.waitForTimeout(1000);
     await page.click('button[type="submit"]');
@@ -219,7 +219,7 @@ test.describe('Participant Enrollment Tests', () => {
     await page.waitForLoadState('networkidle');
 
     // Login
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.waitForTimeout(1000);
     await page.click('button[type="submit"]');

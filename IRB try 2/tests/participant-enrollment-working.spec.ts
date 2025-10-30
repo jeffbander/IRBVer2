@@ -10,7 +10,7 @@ test.describe('Participant Enrollment - Working Test', () => {
     // Login via API (server is already warmed up by global setup)
     const loginResponse = await request.post(`${BASE_URL}/api/auth?action=login`, {
       data: {
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123'
       }
     });
@@ -64,7 +64,7 @@ test.describe('Participant Enrollment - Working Test', () => {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify({
         id: 'test-user',
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         firstName: 'Admin',
         lastName: 'User',
         role: {

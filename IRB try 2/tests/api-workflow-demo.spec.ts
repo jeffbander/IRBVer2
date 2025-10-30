@@ -13,7 +13,7 @@ test.describe('Complete IRB Workflow Demo - API Based', () => {
         'Content-Type': 'application/json',
       },
       data: {
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123',
       },
     });

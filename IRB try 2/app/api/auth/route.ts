@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
       const csrfToken = generateCsrfToken();
       let response = NextResponse.json({
         user: result.user,
+        token: result.token, // BACKWARD COMPATIBILITY: For API tests and programmatic access
         csrfToken, // Client needs this to send in headers
-        // SECURITY: Token is now in httpOnly cookie, not in response body
         message: 'Login successful'
       });
       response = setAuthCookie(response, result.token);
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       const csrfToken = generateCsrfToken();
       let response = NextResponse.json({
         user: result.user,
+        token: result.token, // BACKWARD COMPATIBILITY: For API tests and programmatic access
         csrfToken, // Client needs this to send in headers
         message: 'Registration successful'
       });

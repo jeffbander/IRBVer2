@@ -31,6 +31,26 @@ export function authenticateRequest(request: NextRequest): TokenPayload {
 }
 
 /**
+ * Verify authentication and return result object
+ * Used by API endpoints that need a boolean valid status
+ */
+export async function verifyAuth(request: NextRequest): Promise<{
+  valid: boolean;
+  user?: TokenPayload;
+  error?: string;
+}> {
+  try {
+    const user = authenticateRequest(request);
+    return { valid: true, user };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof AuthenticationError ? error.message : 'Authentication failed'
+    };
+  }
+}
+
+/**
  * Check if permissions object/array has a specific permission
  * Handles both object format {permission: true} and array format [permission, ...]
  */

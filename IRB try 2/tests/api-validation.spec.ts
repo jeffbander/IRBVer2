@@ -9,7 +9,7 @@ test.describe('API Validation', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123',
       }),
     });

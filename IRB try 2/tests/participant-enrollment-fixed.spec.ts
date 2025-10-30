@@ -10,7 +10,7 @@ test.describe('Participant Enrollment - Fixed', () => {
     // Login via API
     const loginResponse = await request.post(`${BASE_URL}/api/auth?action=login`, {
       data: {
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123'
       }
     });
@@ -60,7 +60,7 @@ test.describe('Participant Enrollment - Fixed', () => {
       // This runs before every page load in this context
       const user = {
         id: 'admin-id',
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         firstName: 'Admin',
         lastName: 'User',
         role: {
