@@ -2,14 +2,22 @@
 import { NextRequest } from 'next/server';
 import { verifyToken, TokenPayload } from './auth';
 import { AuthenticationError, AuthorizationError } from './errors';
+import { getAuthCookie } from './cookies';
 
 export interface AuthenticatedRequest extends NextRequest {
   user?: TokenPayload;
 }
 
 // Extract and verify JWT token from request
+// SECURITY: Now reads from httpOnly cookie instead of Authorization header
 export function authenticateRequest(request: NextRequest): TokenPayload {
-  const token = request.headers.get('authorization')?.replace('Bearer ', '');
+  // Try cookie first (preferred for security)
+  let token = getAuthCookie(request);
+
+  // Fallback to Authorization header for backward compatibility during migration
+  if (!token) {
+    token = request.headers.get('authorization')?.replace('Bearer ', '') || null;
+  }
 
   if (!token) {
     throw new AuthenticationError();

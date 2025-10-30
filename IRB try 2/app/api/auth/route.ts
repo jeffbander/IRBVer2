@@ -3,6 +3,8 @@ import { authenticateUser, createUser, hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { rateLimiters } from '@/lib/rate-limit';
 import { cors, handlePreflight } from '@/lib/cors';
+import { setAuthCookie, clearAuthCookie } from '@/lib/cookies';
+import { setCsrfCookie, generateCsrfToken } from '@/lib/csrf';
 
 export async function OPTIONS(request: NextRequest) {
   return handlePreflight(request);
@@ -36,7 +38,16 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const response = NextResponse.json(result);
+      // Set httpOnly cookie with JWT token and CSRF token
+      const csrfToken = generateCsrfToken();
+      let response = NextResponse.json({
+        user: result.user,
+        csrfToken, // Client needs this to send in headers
+        // SECURITY: Token is now in httpOnly cookie, not in response body
+        message: 'Login successful'
+      });
+      response = setAuthCookie(response, result.token);
+      response = setCsrfCookie(response, csrfToken);
       return cors(request, response);
     } catch (error) {
       console.error('Login error:', error);
@@ -102,7 +113,15 @@ export async function POST(request: NextRequest) {
 
       const result = await authenticateUser(email, password);
 
-      const response = NextResponse.json(result);
+      // Set httpOnly cookie with JWT token and CSRF token
+      const csrfToken = generateCsrfToken();
+      let response = NextResponse.json({
+        user: result.user,
+        csrfToken, // Client needs this to send in headers
+        message: 'Registration successful'
+      });
+      response = setAuthCookie(response, result.token);
+      response = setCsrfCookie(response, csrfToken);
       return cors(request, response);
     } catch (error) {
       console.error('Registration error:', error);

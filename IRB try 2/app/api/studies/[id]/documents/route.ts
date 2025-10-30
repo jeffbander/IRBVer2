@@ -5,6 +5,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { DocumentType } from '@prisma/client';
 import { extractTextFromDocument, isOcrSupported } from '@/lib/ocr';
+import { validateFile, generateSecureFileName, scanFileForViruses } from '@/lib/file-validation';
 
 // GET - List documents for a study
 export async function GET(
@@ -137,42 +138,40 @@ export async function POST(
       return NextResponse.json({ error: 'Name and type are required' }, { status: 400 });
     }
 
-    // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 });
-    }
-
-    // Validate file type
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain',
-      'image/jpeg',
-      'image/png'
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'File type not allowed' }, { status: 400 });
+    // SECURITY: Comprehensive file validation
+    const validationResult = await validateFile(file);
+    if (!validationResult.valid) {
+      console.warn(`⚠️ File validation failed: ${validationResult.error}`);
+      return NextResponse.json(
+        { error: validationResult.error },
+        { status: 400 }
+      );
     }
 
     // Create uploads directory if it doesn't exist
     const uploadsDir = path.join(process.cwd(), 'uploads', 'studies', params.id);
     await mkdir(uploadsDir, { recursive: true });
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}-${sanitizedFileName}`;
+    // SECURITY: Generate secure random filename
+    const filename = generateSecureFileName(file.name);
     const filePath = path.join(uploadsDir, filename);
 
     // Save file to disk
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
+
+    // SECURITY: Virus scan (placeholder - integrate ClamAV in production)
+    const scanResult = await scanFileForViruses(filePath);
+    if (!scanResult.clean) {
+      // Delete the file and return error
+      await require('fs/promises').unlink(filePath).catch(console.error);
+      console.error(`🦠 Virus detected in file: ${scanResult.threat}`);
+      return NextResponse.json(
+        { error: 'File failed security scan' },
+        { status: 400 }
+      );
+    }
 
     // Check for existing documents with same name to handle versioning
     const existingDocuments = await prisma.document.findMany({

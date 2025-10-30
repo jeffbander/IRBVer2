@@ -1,6 +1,7 @@
 /**
  * Zustand State Management
  * Global client-side state for authentication and user data
+ * SECURITY: Token is stored in httpOnly cookie, not in localStorage
  */
 
 import { create } from 'zustand';
@@ -21,22 +22,21 @@ interface User {
 }
 
 interface AuthState {
-  token: string | null;
   user: User | null;
-  login: (token: string, user: User) => void;
+  login: (user: User) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
       user: null,
-      login: (token: string, user: User) => {
-        set({ token, user });
+      login: (user: User) => {
+        // SECURITY: Token is stored in httpOnly cookie, only persist user data
+        set({ user });
       },
       logout: () => {
-        set({ token: null, user: null });
+        set({ user: null });
       },
     }),
     {

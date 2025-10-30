@@ -111,7 +111,7 @@ export function rateLimit(config: RateLimitConfig) {
 }
 
 /**
- * Extract identifier from request (IP or authorization header)
+ * Extract identifier from request (IP, cookie, or authorization header)
  */
 function getIdentifier(request: Request): string {
   // Try to get IP from headers (for proxied requests)
@@ -125,7 +125,16 @@ function getIdentifier(request: Request): string {
     return realIp;
   }
 
-  // Fallback to authorization header for authenticated requests
+  // SECURITY: Check for auth token in httpOnly cookie
+  const cookieHeader = request.headers.get('cookie');
+  if (cookieHeader) {
+    const match = cookieHeader.match(/irb_auth_token=([^;]+)/);
+    if (match) {
+      return `auth:${match[1].substring(0, 20)}`; // Use prefix of token
+    }
+  }
+
+  // Fallback to authorization header for authenticated requests (backward compatibility)
   const auth = request.headers.get('authorization');
   if (auth) {
     return `auth:${auth.substring(0, 20)}`; // Use prefix of token
