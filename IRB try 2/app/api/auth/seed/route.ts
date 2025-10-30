@@ -94,7 +94,14 @@ export async function POST() {
       const hashedPassword = await hashPassword('admin123');
       const admin = await prisma.user.upsert({
         where: { email: 'admin@irb.local' },
-        update: {},
+        update: {
+          firstName: 'System',
+          lastName: 'Administrator',
+          password: hashedPassword,
+          roleId: adminRole.id,  // FIX: Update role to admin if user exists
+          active: true,
+          approved: true,
+        },
         create: {
           email: 'admin@irb.local',
           password: hashedPassword,
@@ -117,6 +124,9 @@ export async function POST() {
           firstName: 'Dr. Claude',
           lastName: 'Reviewer',
           password: hashedPassword,
+          roleId: reviewerRole.id,  // FIX: Update role to reviewer if user exists
+          active: true,
+          approved: true,
         },
         create: {
           email: 'reviewer@irb.local',
@@ -140,6 +150,9 @@ export async function POST() {
           firstName: 'Dr. Claude',
           lastName: 'Researcher',
           password: hashedPassword,
+          roleId: researcherRole.id,  // FIX: Update role to researcher if user exists
+          active: true,
+          approved: true,
         },
         create: {
           email: 'researcher@irb.local',
@@ -163,6 +176,9 @@ export async function POST() {
           firstName: 'Claude',
           lastName: 'Coordinator',
           password: hashedPassword,
+          roleId: coordinatorRole.id,  // FIX: Update role to coordinator if user exists
+          active: true,
+          approved: true,
         },
         create: {
           email: 'coordinator@irb.local',

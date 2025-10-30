@@ -20,7 +20,7 @@ test.describe('Complete UX Flow - Comprehensive Testing', () => {
     // Login
     const loginResponse = await request.post(`${BASE_URL}/api/auth?action=login`, {
       data: {
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         password: 'admin123'
       }
     });
@@ -90,7 +90,7 @@ test.describe('Complete UX Flow - Comprehensive Testing', () => {
     await page.goto(`${BASE_URL}/login`);
     await page.waitForLoadState('domcontentloaded');
 
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'admin123');
 
     await page.locator('button[type="submit"]').click();

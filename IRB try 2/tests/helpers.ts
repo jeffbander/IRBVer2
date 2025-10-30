@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 
-export async function login(page: Page, email: string = 'admin@example.com', password: string = 'admin123') {
+export async function login(page: Page, email: string = 'admin@test.com', password: string = 'admin123') {
   // Clear any existing localStorage
   await page.context().clearCookies();
 

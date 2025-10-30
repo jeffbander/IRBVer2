@@ -52,7 +52,7 @@ test.describe('Complete Workflow Test - Full System Integration', () => {
     await page.goto('http://localhost:3000/login');
     await page.waitForTimeout(1000);
 
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
@@ -74,7 +74,7 @@ test.describe('Complete Workflow Test - Full System Integration', () => {
       const users = await rolesResponse.json();
       if (users.length > 0) {
         // Find researcher and reviewer role IDs from existing users
-        const adminUser = users.find((u: any) => u.email === 'admin@example.com');
+        const adminUser = users.find((u: any) => u.email === 'admin@test.com');
         const researcherUser = users.find((u: any) => u.email === 'researcher@example.com');
 
         if (adminUser && adminUser.role) {
@@ -209,7 +209,7 @@ test.describe('Complete Workflow Test - Full System Integration', () => {
 
     await page.waitForURL(/login/, { timeout: 5000 });
 
-    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="email"]', 'admin@test.com');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 

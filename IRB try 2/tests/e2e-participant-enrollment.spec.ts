@@ -8,7 +8,7 @@ test.describe('E2E Participant Enrollment', () => {
   test.beforeAll(async ({ request }) => {
     // Create and activate study via API for speed
     const loginResponse = await request.post(`${BASE_URL}/api/auth?action=login`, {
-      data: { email: 'admin@example.com', password: 'admin123' }
+      data: { email: 'admin@test.com', password: 'admin123' }
     });
     const { token } = await loginResponse.json();
 
@@ -47,7 +47,7 @@ test.describe('E2E Participant Enrollment', () => {
   test('Complete enrollment flow through UI', async ({ page }) => {
     // Step 1: Login through UI
     await page.goto(`${BASE_URL}/login`);
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'admin123');
     await page.click('button[type="submit"]');
 

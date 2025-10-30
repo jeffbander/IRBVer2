@@ -1,4 +1,5 @@
 // Custom React hook for authentication state management
+// SECURITY: Uses httpOnly cookies instead of localStorage to prevent XSS attacks
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -18,22 +19,25 @@ export function useAuth() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
-  // Load user from localStorage on mount
+  // Check authentication status on mount
+  // Note: Token is stored in httpOnly cookie, not accessible to JavaScript
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
+    const storedCsrfToken = localStorage.getItem('csrfToken');
 
-    if (storedToken && storedUser) {
+    if (storedUser) {
       try {
-        setToken(storedToken);
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error('Failed to parse user data:', error);
-        localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
+    }
+
+    if (storedCsrfToken) {
+      setCsrfToken(storedCsrfToken);
     }
 
     setLoading(false);
@@ -44,6 +48,7 @@ export function useAuth() {
       const response = await fetch('/api/auth?action=login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // SECURITY: Include cookies in request
         body: JSON.stringify({ email, password }),
       });
 
@@ -54,10 +59,13 @@ export function useAuth() {
 
       const data = await response.json();
 
-      localStorage.setItem('token', data.token);
+      // Token is stored in httpOnly cookie automatically
+      // Store user data and CSRF token in localStorage
       localStorage.setItem('user', JSON.stringify(data.user));
-
-      setToken(data.token);
+      if (data.csrfToken) {
+        localStorage.setItem('csrfToken', data.csrfToken);
+        setCsrfToken(data.csrfToken);
+      }
       setUser(data.user);
 
       return data;
@@ -70,6 +78,7 @@ export function useAuth() {
       const response = await fetch('/api/auth?action=register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // SECURITY: Include cookies in request
         body: JSON.stringify({ email, password, firstName, lastName }),
       });
 
@@ -80,10 +89,13 @@ export function useAuth() {
 
       const data = await response.json();
 
-      localStorage.setItem('token', data.token);
+      // Token is stored in httpOnly cookie automatically
+      // Store user data and CSRF token in localStorage
       localStorage.setItem('user', JSON.stringify(data.user));
-
-      setToken(data.token);
+      if (data.csrfToken) {
+        localStorage.setItem('csrfToken', data.csrfToken);
+        setCsrfToken(data.csrfToken);
+      }
       setUser(data.user);
 
       return data;
@@ -91,11 +103,23 @@ export function useAuth() {
     []
   );
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
+  const logout = useCallback(async () => {
+    try {
+      // Call logout endpoint to clear httpOnly cookie
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // SECURITY: Include cookies in request
+      });
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+      // Continue with local cleanup even if API call fails
+    }
+
+    // Clear local user data and CSRF token
     localStorage.removeItem('user');
-    setToken(null);
+    localStorage.removeItem('csrfToken');
     setUser(null);
+    setCsrfToken(null);
     router.push('/login');
   }, [router]);
 
@@ -146,9 +170,9 @@ export function useAuth() {
 
   return {
     user,
-    token,
     loading,
-    isAuthenticated: !!token && !!user,
+    csrfToken, // Expose CSRF token for API requests
+    isAuthenticated: !!user, // SECURITY: Token is in httpOnly cookie, check user instead
     login,
     register,
     logout,

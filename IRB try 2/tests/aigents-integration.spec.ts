@@ -38,7 +38,6 @@ test.describe('Aigents Integration', () => {
     await page.fill('input[name="title"]', 'Aigents Integration Test Study');
     await page.fill('input[name="protocolNumber"]', 'AIGT-2024-001');
     await page.fill('textarea[name="description"]', 'This is a test study for Aigents integration with sufficient description length for validation.');
-    await page.selectOption('select[name="phase"]', 'PHASE_II');
     await page.fill('input[name="targetEnrollment"]', '50');
 
     await page.click('button:has-text("Create Study")');
