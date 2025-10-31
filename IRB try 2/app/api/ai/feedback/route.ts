@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { submitFeedback } from '@/lib/ai/protocol-analyzer';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { aiAnalysisId, userId, feedbackType, rating, comment, correctedData } =

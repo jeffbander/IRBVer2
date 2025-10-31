@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeProtocol } from '@/lib/ai/protocol-analyzer';
 
+// Force dynamic rendering - don't try to statically analyze during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { studyId, forceProvider } = await request.json();
