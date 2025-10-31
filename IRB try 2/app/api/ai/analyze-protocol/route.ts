@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeProtocol } from '@/lib/ai/protocol-analyzer';
 
-// Force dynamic rendering - don't try to statically analyze during build
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +21,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Dynamic import to avoid build-time errors
+    const { analyzeProtocol } = await import('@/lib/ai/protocol-analyzer');
 
     // Run analysis
     const result = await analyzeProtocol({

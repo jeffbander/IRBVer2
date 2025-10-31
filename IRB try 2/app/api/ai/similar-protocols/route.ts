@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findSimilarProtocols } from '@/lib/ai/embeddings';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  const { findSimilarProtocols } = await import('@/lib/ai/embeddings');
   try {
     const searchParams = request.nextUrl.searchParams;
     const aiAnalysisId = searchParams.get('aiAnalysisId');

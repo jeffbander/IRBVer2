@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { translateProtocol, detectLanguage, SupportedLanguage } from '@/lib/ai/translation';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  const { translateProtocol, detectLanguage } = await import('@/lib/ai/translation');
   try {
     const { text, targetLanguage, sourceLanguage } = await request.json();
 

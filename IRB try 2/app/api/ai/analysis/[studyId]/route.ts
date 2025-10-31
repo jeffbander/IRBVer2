@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAnalysisResults } from '@/lib/ai/protocol-analyzer';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
@@ -17,6 +17,8 @@ export async function GET(
       );
     }
 
+    // Dynamic import to avoid build-time errors
+    const { getAnalysisResults } = await import('@/lib/ai/protocol-analyzer');
     const analysis = await getAnalysisResults(studyId);
 
     if (!analysis) {
