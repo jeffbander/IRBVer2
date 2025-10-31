@@ -1,0 +1,57 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Testing
+coverage
+test-results
+playwright-report
+artifacts
+
+# Development files
+*.local
+.env
+.env.local
+.env.development
+.env.test
+dev.db
+dev.db-journal
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uploads and temp files
+uploads
+temp
+tmp
+
+# Screenshots
+demo-screenshots
+debug-screenshots
+
+# Logs
+logs
+*.log
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Prisma
+prisma/migrations/*_initial
