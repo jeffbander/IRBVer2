@@ -1,5 +1,4 @@
-import * as openaiClient from './openai-client';
-import * as anthropicClient from './anthropic-client';
+// Dynamic imports to avoid build-time errors with AI clients
 import { prisma } from '@/lib/prisma';
 import {
   generateProtocolEmbedding,
@@ -10,6 +9,17 @@ import {
   analyzeHistoricalMetrics,
   generateBestPractices,
 } from './historical-analysis';
+
+// Helper functions for dynamic imports
+async function getOpenAIClient() {
+  const module = await import('./openai-client');
+  return module;
+}
+
+async function getAnthropicClient() {
+  const module = await import('./anthropic-client');
+  return module;
+}
 
 export interface AnalyzeProtocolOptions {
   studyId: string;
@@ -81,12 +91,12 @@ export async function analyzeProtocol(
       console.log(`Analyzing protocol for study ${studyId} using ${provider}...`);
 
       const analysisResult = useOpenAI
-        ? await openaiClient.analyzeProtocol({
+        ? await (await getOpenAIClient()).analyzeProtocol({
             protocolText: protocolDoc.ocrContent,
             documentName: protocolDoc.name,
             studyTitle: study.title,
           })
-        : await anthropicClient.analyzeProtocol({
+        : await (await getAnthropicClient()).analyzeProtocol({
             protocolText: protocolDoc.ocrContent,
             documentName: protocolDoc.name,
             studyTitle: study.title,
@@ -205,11 +215,11 @@ async function extractAndStoreCriteria(
 
     const result =
       provider === 'openai'
-        ? await openaiClient.extractCriteria({
+        ? await (await getOpenAIClient()).extractCriteria({
             protocolText,
             criteriaType: 'both',
           })
-        : await anthropicClient.extractCriteria({
+        : await (await getAnthropicClient()).extractCriteria({
             protocolText,
             criteriaType: 'both',
           });
@@ -252,8 +262,8 @@ async function generateAndStoreVisitSchedule(
 
     const result =
       provider === 'openai'
-        ? await openaiClient.generateVisitSchedule({ protocolText })
-        : await anthropicClient.generateVisitSchedule({ protocolText });
+        ? await (await getOpenAIClient()).generateVisitSchedule({ protocolText })
+        : await (await getAnthropicClient()).generateVisitSchedule({ protocolText });
 
     const data = result.data;
     const visits = data.visits || [];
@@ -390,7 +400,7 @@ async function generateAndStoreBudgetEstimate(
 
     const result =
       provider === 'openai'
-        ? await openaiClient.estimateBudget({
+        ? await (await getOpenAIClient()).estimateBudget({
             protocolText,
             visitSchedule: visitSchedule.map((v) => ({
               visitName: v.visitName,
@@ -435,7 +445,7 @@ async function performAndStoreRiskAssessment(
 
     const result =
       provider === 'openai'
-        ? await openaiClient.assessRisk({
+        ? await (await getOpenAIClient()).assessRisk({
             protocolText,
             studyMetadata,
           })
@@ -475,7 +485,7 @@ async function performAndStoreComplianceCheck(
 
     const result =
       provider === 'openai'
-        ? await openaiClient.checkCompliance({
+        ? await (await getOpenAIClient()).checkCompliance({
             protocolText,
             studyMetadata,
           })
