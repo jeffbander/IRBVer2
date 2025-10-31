@@ -1,9 +1,20 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Lazy initialization of Anthropic client to avoid build-time errors
+let anthropicClient: Anthropic | null = null;
+
+function getAnthropicClient(): Anthropic {
+  if (!anthropicClient) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+    }
+    anthropicClient = new Anthropic({
+      apiKey,
+    });
+  }
+  return anthropicClient;
+}
 
 export interface AnalysisPromptOptions {
   protocolText: string;
@@ -63,7 +74,7 @@ Please provide a comprehensive analysis in the following JSON format:
 Return ONLY the JSON object, no additional text.`;
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await getAnthropicClient().messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 4000,
       temperature: 0.3,
@@ -151,7 +162,7 @@ Guidelines:
 Return ONLY the JSON object, no additional text.`;
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await getAnthropicClient().messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 6000,
       temperature: 0.2,
@@ -233,7 +244,7 @@ Guidelines:
 Return ONLY the JSON object, no additional text.`;
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await getAnthropicClient().messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 4000,
       temperature: 0.2,
