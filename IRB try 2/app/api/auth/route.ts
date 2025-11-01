@@ -5,12 +5,16 @@ import { rateLimiters } from '@/lib/rate-limit';
 import { cors, handlePreflight } from '@/lib/cors';
 import { setAuthCookie, clearAuthCookie } from '@/lib/cookies';
 import { setCsrfCookie, generateCsrfToken } from '@/lib/csrf';
+import { ensureDatabase } from '@/lib/db-init';
 
 export async function OPTIONS(request: NextRequest) {
   return handlePreflight(request);
 }
 
 export async function POST(request: NextRequest) {
+  // Ensure database is initialized (needed for Vercel's ephemeral filesystem)
+  await ensureDatabase();
+
   // Apply rate limiting to auth endpoints
   const rateLimited = await rateLimiters.auth(request);
   if (rateLimited) return rateLimited;
