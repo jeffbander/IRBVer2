@@ -22,21 +22,24 @@ interface User {
 }
 
 interface AuthState {
+  token: string | null;
   user: User | null;
-  login: (user: User) => void;
+  login: (token: string, user: User) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
+      token: null,
       user: null,
-      login: (user: User) => {
-        // SECURITY: Token is stored in httpOnly cookie, only persist user data
-        set({ user });
+      login: (token: string, user: User) => {
+        // SECURITY: Token is ALSO stored in httpOnly cookie for server-side auth
+        // but we keep it in state for client-side API calls with Authorization header
+        set({ token, user });
       },
       logout: () => {
-        set({ user: null });
+        set({ token: null, user: null });
       },
     }),
     {
