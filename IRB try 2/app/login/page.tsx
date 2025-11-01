@@ -36,8 +36,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      // Store token in Zustand state
-      useAuthStore.getState().login(data.token, data.user);
+      // Store user in Zustand state (token is in httpOnly cookie)
+      useAuthStore.getState().login(data.user);
 
       // Redirect to dashboard
       router.push('/dashboard');
