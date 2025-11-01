@@ -45,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage', // localStorage key
       storage: createJSONStorage(() => localStorage),
+      version: 1, // Version 1: Added token field - will auto-clear old data
     }
   )
 );
