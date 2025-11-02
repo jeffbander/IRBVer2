@@ -45,7 +45,14 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage', // localStorage key
       storage: createJSONStorage(() => localStorage),
-      version: 1, // Version 1: Added token field - will auto-clear old data
+      version: 2, // Version 2: Force clear old data that doesn't have token field
+      migrate: (persistedState: any, version: number) => {
+        // If upgrading from version 0 or 1, clear everything and force re-login
+        if (version < 2) {
+          return { token: null, user: null };
+        }
+        return persistedState;
+      },
     }
   )
 );
