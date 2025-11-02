@@ -55,7 +55,7 @@ interface ReviewAction {
 
 export default function StudyDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { token, user } = useAuthStore();
+  const { token, user, _hasHydrated } = useAuthStore();
   const [study, setStudy] = useState<Study | null>(null);
   const [reviewHistory, setReviewHistory] = useState<ReviewAction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +83,12 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   const [uploadStatus, setUploadStatus] = useState<'uploading' | 'processing-ocr' | 'completed' | 'error'>('uploading');
 
   useEffect(() => {
+    // Wait for Zustand to rehydrate from localStorage before checking auth
+    if (!_hasHydrated) {
+      return;
+    }
+
+    // Check authentication after hydration
     if (!token || !user) {
       router.push('/login');
       return;
@@ -90,7 +96,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
 
     fetchStudy(token);
     fetchReviewHistory(token);
-  }, [token, user, params.id, router]);
+  }, [token, user, _hasHydrated, params.id, router]);
 
   const fetchStudy = async (token: string) => {
     try {
