@@ -31,7 +31,7 @@ interface Study {
 
 export default function StudiesPage() {
   const router = useRouter();
-  const { token, user } = useAuthStore();
+  const { token, user, _hasHydrated } = useAuthStore();
   const [studies, setStudies] = useState<Study[]>([]);
   const [filteredStudies, setFilteredStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,13 +43,19 @@ export default function StudiesPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'review'>('all');
 
   useEffect(() => {
+    // Wait for Zustand to rehydrate from localStorage before checking auth
+    if (!_hasHydrated) {
+      return;
+    }
+
+    // Check authentication after hydration
     if (!token || !user) {
       router.push('/login');
       return;
     }
 
     fetchStudies(token);
-  }, [filter, router, token, user]);
+  }, [filter, router, token, user, _hasHydrated]);
 
   const fetchStudies = async (token: string) => {
     try {
