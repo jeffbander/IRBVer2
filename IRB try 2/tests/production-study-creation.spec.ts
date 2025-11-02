@@ -94,9 +94,11 @@ test.describe('Production Study Creation Flow', () => {
     // DOCUMENT UPLOAD & AI ANALYSIS
     // ========================================
 
-    // Click on the study to navigate to detail page
+    // Click on the "View Details" link to navigate to detail page
     console.log('📖 Opening study detail page...');
-    await studyInList.click();
+    // Find the "View Details" link in the same row as our protocol number
+    const viewDetailsLink = page.locator(`text=${protocolNumber}`).locator('..').locator('..').locator('a:has-text("View Details")');
+    await viewDetailsLink.click();
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000); // Give time for page to fully load
 
