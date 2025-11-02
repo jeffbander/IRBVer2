@@ -57,27 +57,33 @@ test.describe('Production Study Creation Flow', () => {
     await submitButton.scrollIntoViewIfNeeded();
     await submitButton.click();
 
-    // Wait for success and navigation back to studies list
-    await page.waitForTimeout(3000);
-    await page.screenshot({ path: 'demo-screenshots/prod-07-study-created.png', fullPage: true });
+    // Wait for redirect to study detail page
+    console.log('⏳ Waiting for redirect to study detail page...');
+    await page.waitForURL(`**/studies/**`, { timeout: 10000 });
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'demo-screenshots/prod-07-study-details.png', fullPage: true });
 
-    // Verify study appears in list
-    console.log('🔍 Verifying study in list...');
-    const studyCard = page.locator(`text=${protocolNumber}`);
-    await expect(studyCard).toBeVisible({ timeout: 10000 });
+    // Verify we're on the study details page
+    console.log('👁️ Verifying study details page...');
+    console.log(`Current URL: ${page.url()}`);
+
+    // Verify study details are visible
+    await expect(page.locator(`text=${protocolNumber}`)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Production Test Study')).toBeVisible();
 
     console.log('✅ Study created successfully!');
     console.log(`📋 Protocol Number: ${protocolNumber}`);
 
-    // Click on the study to view details
-    console.log('👁️ Opening study details...');
-    await studyCard.click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: 'demo-screenshots/prod-08-study-details.png', fullPage: true });
+    // Navigate back to studies list to verify it appears there
+    console.log('📋 Navigating back to studies list...');
+    await page.goto(`${PRODUCTION_URL}/studies`);
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'demo-screenshots/prod-08-studies-list.png', fullPage: true });
 
-    // Verify study details page
-    await expect(page.locator(`text=${protocolNumber}`)).toBeVisible();
-    await expect(page.locator('text=Production Test Study')).toBeVisible();
+    // Verify study appears in the list
+    console.log('🔍 Verifying study appears in list...');
+    const studyInList = page.locator(`text=${protocolNumber}`);
+    await expect(studyInList).toBeVisible({ timeout: 10000 });
 
     console.log('✅ All tests passed! Production is working correctly.');
   });
