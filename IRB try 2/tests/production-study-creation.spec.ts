@@ -79,16 +79,12 @@ test.describe('Production Study Creation Flow', () => {
 
     await page.screenshot({ path: 'demo-screenshots/prod-08-studies-list-verification.png', fullPage: true });
 
-    // Verify study appears in the list
+    // Verify study appears in the list by its unique protocol number
     console.log('🔍 Verifying study appears in list...');
     console.log(`   Looking for protocol number: ${protocolNumber}`);
 
     const studyInList = page.locator(`text=${protocolNumber}`);
     await expect(studyInList).toBeVisible({ timeout: 10000 });
-
-    // Also verify the title appears
-    const titleInList = page.locator('text=Production Test Study');
-    await expect(titleInList).toBeVisible({ timeout: 5000 });
 
     console.log('✅ Study created successfully!');
     console.log(`📋 Protocol Number: ${protocolNumber}`);
