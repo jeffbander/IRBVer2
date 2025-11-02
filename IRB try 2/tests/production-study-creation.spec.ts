@@ -27,12 +27,16 @@ test.describe('Production Study Creation Flow', () => {
     await page.goto(`${PRODUCTION_URL}/studies`);
     await page.waitForLoadState('networkidle');
 
+    // Wait for New Study button to be visible (gives hydration time to complete)
+    console.log('⏳ Waiting for Studies page to fully load...');
+    const createButton = page.locator('button:has-text("New Study")');
+    await createButton.waitFor({ state: 'visible', timeout: 10000 });
+
     console.log('✅ On Studies page');
     await page.screenshot({ path: 'demo-screenshots/prod-04-studies-list.png', fullPage: true });
 
     // Click Create Study button
     console.log('➕ Creating new study...');
-    const createButton = page.locator('text=Create Study').or(page.locator('button:has-text("New Study")')).first();
     await createButton.click();
     await page.waitForTimeout(1000);
 
@@ -61,6 +65,12 @@ test.describe('Production Study Creation Flow', () => {
     console.log('⏳ Waiting for redirect to study detail page...');
     await page.waitForURL(`**/studies/**`, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
+
+    // Wait for the study detail page to fully load by waiting for specific content
+    // This gives hydration time to complete before checking auth
+    console.log('⏳ Waiting for study details to load...');
+    await page.waitForSelector('text=Study Information', { timeout: 15000 });
+
     await page.screenshot({ path: 'demo-screenshots/prod-07-study-details.png', fullPage: true });
 
     // Verify we're on the study details page
