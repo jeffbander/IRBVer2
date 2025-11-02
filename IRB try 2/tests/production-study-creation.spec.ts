@@ -94,10 +94,11 @@ test.describe('Production Study Creation Flow', () => {
     // DOCUMENT UPLOAD & AI ANALYSIS
     // ========================================
 
-    // Click on the first "View Details" link to navigate to detail page
-    // Our study was just created so it should be the first one in the list
+    // Click on the "View Details" link for our newly created study
+    // Look for the row containing our protocol number, then find the View Details link in that row
     console.log('📖 Opening study detail page...');
-    const viewDetailsLink = page.locator('a:has-text("View Details")').first();
+    const studyRow = page.locator(`tr:has-text("${protocolNumber}")`);
+    const viewDetailsLink = studyRow.locator('a:has-text("View Details")');
     await viewDetailsLink.waitFor({ state: 'visible', timeout: 10000 });
     await viewDetailsLink.click();
     await page.waitForLoadState('networkidle');
