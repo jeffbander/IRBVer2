@@ -320,7 +320,8 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
     return labels[action] || action;
   };
 
-  if (loading || !study) {
+  // Show loading state while hydrating or loading study data
+  if (!_hasHydrated || loading || !study) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
