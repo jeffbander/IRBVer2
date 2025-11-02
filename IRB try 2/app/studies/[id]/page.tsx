@@ -59,6 +59,7 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   const [study, setStudy] = useState<Study | null>(null);
   const [reviewHistory, setReviewHistory] = useState<ReviewAction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewAction, setReviewAction] = useState('');
   const [reviewComments, setReviewComments] = useState('');
@@ -83,35 +84,67 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   const [uploadStatus, setUploadStatus] = useState<'uploading' | 'processing-ocr' | 'completed' | 'error'>('uploading');
 
   useEffect(() => {
+    console.log('[StudyDetail] useEffect triggered', {
+      _hasHydrated,
+      hasToken: !!token,
+      hasUser: !!user,
+      studyId: params.id
+    });
+
     // Wait for Zustand to rehydrate from localStorage before checking auth
     if (!_hasHydrated) {
+      console.log('[StudyDetail] Waiting for hydration...');
       return;
     }
 
     // Check authentication after hydration
     if (!token || !user) {
+      console.log('[StudyDetail] No token or user, redirecting to login');
       router.push('/login');
       return;
     }
 
+    console.log('[StudyDetail] Fetching study data...');
     fetchStudy(token);
     fetchReviewHistory(token);
-  }, [token, user, _hasHydrated, params.id, router]);
+  // Remove router from dependencies to prevent unnecessary re-renders
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user, _hasHydrated, params.id]);
 
   const fetchStudy = async (token: string) => {
     try {
+      console.log('[StudyDetail] Fetching study:', params.id);
       const response = await fetch(`/api/studies/${params.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log('[StudyDetail] API response:', {
+        status: response.status,
+        ok: response.ok
+      });
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[StudyDetail] Study data received:', data.id);
         setStudy(data);
+        setError(null);
       } else {
-        router.push('/studies');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorMessage = response.status === 403
+          ? 'You do not have permission to view this study'
+          : response.status === 404
+          ? 'Study not found'
+          : errorData.error || 'Failed to load study';
+
+        console.error('[StudyDetail] API error:', {
+          status: response.status,
+          error: errorMessage
+        });
+        setError(errorMessage);
       }
     } catch (error) {
-      console.error('Failed to fetch study:', error);
+      console.error('[StudyDetail] Failed to fetch study:', error);
+      setError('Network error: Failed to load study');
     } finally {
       setLoading(false);
     }
@@ -321,12 +354,43 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   };
 
   // Show loading state while hydrating or loading study data
-  if (!_hasHydrated || loading || !study) {
+  if (!_hasHydrated || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#003F6C] mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading study details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if study failed to load
+  if (error || !study) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-lg shadow-sm p-8">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Failed to Load Study</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                {error || 'The study could not be found or you may not have permission to view it.'}
+              </p>
+              <div className="mt-6">
+                <button
+                  onClick={() => router.push('/studies')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#003F6C] hover:bg-[#002D4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003F6C]"
+                >
+                  Back to Studies
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
