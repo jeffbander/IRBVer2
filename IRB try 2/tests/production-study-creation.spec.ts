@@ -53,10 +53,12 @@ test.describe('Production Study Creation Flow', () => {
 
     // Submit form
     console.log('💾 Submitting study...');
-    await page.click('button[type="submit"]:has-text("Create")');
+    const submitButton = page.locator('button[type="submit"]:has-text("Save as Draft")');
+    await submitButton.scrollIntoViewIfNeeded();
+    await submitButton.click();
 
-    // Wait for success
-    await page.waitForTimeout(2000);
+    // Wait for success and navigation back to studies list
+    await page.waitForTimeout(3000);
     await page.screenshot({ path: 'demo-screenshots/prod-07-study-created.png', fullPage: true });
 
     // Verify study appears in list
