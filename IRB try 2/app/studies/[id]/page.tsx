@@ -83,28 +83,19 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   const [uploadStatus, setUploadStatus] = useState<'uploading' | 'processing-ocr' | 'completed' | 'error'>('uploading');
 
   useEffect(() => {
-    console.log('[Study Detail] useEffect - _hasHydrated:', _hasHydrated, 'token:', !!token, 'user:', !!user);
-
     // Wait for Zustand to rehydrate from localStorage before checking auth
     if (!_hasHydrated) {
-      console.log('[Study Detail] Hydration not complete, returning early');
       return;
     }
 
-    // TEMPORARY: Comment out auth check for testing
     // Check authentication after hydration
-    // if (!token || !user) {
-    //   console.log('[Study Detail] No auth after hydration, redirecting to login');
-    //   router.push('/login');
-    //   return;
-    // }
-
-    console.log('[Study Detail] Attempting to fetch study');
-    // Use token if available, but don't fail if missing (for testing)
-    if (token) {
-      fetchStudy(token);
-      fetchReviewHistory(token);
+    if (!token || !user) {
+      router.push('/login');
+      return;
     }
+
+    fetchStudy(token);
+    fetchReviewHistory(token);
   }, [token, user, _hasHydrated, params.id, router]);
 
   const fetchStudy = async (token: string) => {
