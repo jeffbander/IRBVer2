@@ -83,17 +83,22 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
   const [uploadStatus, setUploadStatus] = useState<'uploading' | 'processing-ocr' | 'completed' | 'error'>('uploading');
 
   useEffect(() => {
+    console.log('[Study Detail] useEffect - _hasHydrated:', _hasHydrated, 'token:', !!token, 'user:', !!user);
+
     // Wait for Zustand to rehydrate from localStorage before checking auth
     if (!_hasHydrated) {
+      console.log('[Study Detail] Hydration not complete, returning early');
       return;
     }
 
     // Check authentication after hydration
     if (!token || !user) {
+      console.log('[Study Detail] No auth after hydration, redirecting to login');
       router.push('/login');
       return;
     }
 
+    console.log('[Study Detail] Auth OK, fetching study');
     fetchStudy(token);
     fetchReviewHistory(token);
   }, [token, user, _hasHydrated, params.id, router]);
