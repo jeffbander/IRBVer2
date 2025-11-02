@@ -24,6 +24,8 @@ interface User {
 interface AuthState {
   token: string | null;
   user: User | null;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   login: (token: string, user: User) => void;
   logout: () => void;
 }
@@ -33,6 +35,10 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
+      _hasHydrated: false,
+      setHasHydrated: (state) => {
+        set({ _hasHydrated: state });
+      },
       login: (token: string, user: User) => {
         // SECURITY: Token is ALSO stored in httpOnly cookie for server-side auth
         // but we keep it in state for client-side API calls with Authorization header
@@ -49,9 +55,12 @@ export const useAuthStore = create<AuthState>()(
       migrate: (persistedState: any, version: number) => {
         // If upgrading from version 0 or 1, clear everything and force re-login
         if (version < 2) {
-          return { token: null, user: null };
+          return { token: null, user: null, _hasHydrated: false };
         }
         return persistedState;
+      },
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
       },
     }
   )

@@ -7,7 +7,7 @@ import { StatCard, Button, StatusBadge } from '@/components/ui';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { token, user } = useAuthStore();
+  const { token, user, _hasHydrated } = useAuthStore();
   const [stats, setStats] = useState({
     totalStudies: 0,
     activeStudies: 0,
@@ -16,7 +16,12 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    // Check authentication
+    // Wait for Zustand to rehydrate from localStorage before checking auth
+    if (!_hasHydrated) {
+      return;
+    }
+
+    // Check authentication after hydration
     if (!token || !user) {
       router.push('/login');
       return;
@@ -30,7 +35,7 @@ export default function Dashboard() {
 
     // Fetch dashboard stats
     fetchStats(token);
-  }, [router, token, user]);
+  }, [router, token, user, _hasHydrated]);
 
   const fetchStats = async (token: string) => {
     try {
