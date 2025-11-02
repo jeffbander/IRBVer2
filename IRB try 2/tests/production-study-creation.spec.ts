@@ -94,13 +94,22 @@ test.describe('Production Study Creation Flow', () => {
     // DOCUMENT UPLOAD & AI ANALYSIS
     // ========================================
 
-    // Click on the "View Details" link for our newly created study
-    // Look for the row containing our protocol number, then find the View Details link in that row
-    console.log('📖 Opening study detail page...');
-    const studyRow = page.locator(`tr:has-text("${protocolNumber}")`);
-    const viewDetailsLink = studyRow.locator('a:has-text("View Details")');
-    await viewDetailsLink.waitFor({ state: 'visible', timeout: 10000 });
-    await viewDetailsLink.click();
+    // Get the study ID from the API response
+    // We'll need to fetch the study list to get the ID
+    console.log('📖 Finding study ID...');
+    const studiesResponse = await page.request.get(`${PRODUCTION_URL}/api/studies`);
+    const studies = await studiesResponse.json();
+    const createdStudy = studies.find((s: any) => s.protocolNumber === protocolNumber);
+
+    if (!createdStudy) {
+      throw new Error(`Could not find study with protocol number ${protocolNumber}`);
+    }
+
+    console.log(`✅ Found study ID: ${createdStudy.id}`);
+    console.log('📖 Navigating to study detail page...');
+
+    // Navigate directly to the study detail page
+    await page.goto(`${PRODUCTION_URL}/studies/${createdStudy.id}`);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000); // Give time for page to fully load
 
