@@ -3,6 +3,12 @@ const nextConfig = {
   reactStrictMode: true,
   output: process.env.NETLIFY ? undefined : 'standalone', // Standalone for Cloud Run/Firebase, default for Netlify
 
+  // Experimental features
+  experimental: {
+    // Fix for "Cannot read properties of null (reading 'useContext')" during build
+    missingSuspenseWithCSRBailout: false,
+  },
+
   // ESLint configuration
   eslint: {
     // Warning: This allows production builds to successfully complete even if
