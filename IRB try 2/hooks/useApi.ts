@@ -23,6 +23,10 @@ export function useApi<T = any>(options: UseApiOptions = {}) {
   });
 
   const getToken = useCallback(() => {
+    // SSR safety check
+    if (typeof window === 'undefined') {
+      return null;
+    }
     const token = localStorage.getItem('token');
     if (!token && options.redirectOnUnauth !== false) {
       router.push('/login');
@@ -53,8 +57,10 @@ export function useApi<T = any>(options: UseApiOptions = {}) {
         if (!response.ok) {
           if (response.status === 401) {
             // Token expired or invalid
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+            }
             router.push('/login');
             throw new Error('Session expired. Please login again.');
           }
@@ -152,8 +158,10 @@ export function useApi<T = any>(options: UseApiOptions = {}) {
 
         if (!response.ok) {
           if (response.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+            }
             router.push('/login');
             throw new Error('Session expired. Please login again.');
           }

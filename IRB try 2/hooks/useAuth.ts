@@ -24,6 +24,12 @@ export function useAuth() {
   // Check authentication status on mount
   // Note: Token is stored in httpOnly cookie, not accessible to JavaScript
   useEffect(() => {
+    // SSR safety check
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     const storedUser = localStorage.getItem('user');
     const storedCsrfToken = localStorage.getItem('csrfToken');
 
@@ -61,10 +67,12 @@ export function useAuth() {
 
       // Token is stored in httpOnly cookie automatically
       // Store user data and CSRF token in localStorage
-      localStorage.setItem('user', JSON.stringify(data.user));
-      if (data.csrfToken) {
-        localStorage.setItem('csrfToken', data.csrfToken);
-        setCsrfToken(data.csrfToken);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.csrfToken) {
+          localStorage.setItem('csrfToken', data.csrfToken);
+          setCsrfToken(data.csrfToken);
+        }
       }
       setUser(data.user);
 
@@ -91,10 +99,12 @@ export function useAuth() {
 
       // Token is stored in httpOnly cookie automatically
       // Store user data and CSRF token in localStorage
-      localStorage.setItem('user', JSON.stringify(data.user));
-      if (data.csrfToken) {
-        localStorage.setItem('csrfToken', data.csrfToken);
-        setCsrfToken(data.csrfToken);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.csrfToken) {
+          localStorage.setItem('csrfToken', data.csrfToken);
+          setCsrfToken(data.csrfToken);
+        }
       }
       setUser(data.user);
 
@@ -116,15 +126,19 @@ export function useAuth() {
     }
 
     // Clear local user data and CSRF token
-    localStorage.removeItem('user');
-    localStorage.removeItem('csrfToken');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('csrfToken');
+    }
     setUser(null);
     setCsrfToken(null);
     router.push('/login');
   }, [router]);
 
   const updateUser = useCallback((updatedUser: User) => {
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
     setUser(updatedUser);
   }, []);
 
