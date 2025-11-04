@@ -50,7 +50,8 @@ export default function StudiesPage() {
 
     // Check authentication after hydration
     if (!token || !user) {
-      router.push('/login');
+      // Don't redirect if we're still hydrating - just keep loading
+      setLoading(false);
       return;
     }
 
