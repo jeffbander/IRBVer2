@@ -99,8 +99,9 @@ export default function StudyDetailPage({ params }: { params: { id: string } }) 
 
     // Check authentication after hydration
     if (!token || !user) {
-      console.log('[StudyDetail] No token or user, redirecting to login');
-      router.push('/login');
+      console.log('[StudyDetail] No token or user, showing error state');
+      // Don't redirect if we're still hydrating - just show error state
+      setLoading(false);
       return;
     }
 
